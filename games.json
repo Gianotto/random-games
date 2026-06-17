@@ -7,7 +7,11 @@
     "path": "/games/torre-infinita/",
     "color": "#ffd700",
     "added": "2025-01-01",
-    "tags": ["platform", "endless", "arcade"]
+    "tags": [
+      "platform",
+      "endless",
+      "arcade"
+    ]
   },
   {
     "id": "lua-runner",
@@ -17,7 +21,11 @@
     "path": "/games/lua-runner/",
     "color": "#aaddff",
     "added": "2026-05-22",
-    "tags": ["runner", "endless", "arcade"]
+    "tags": [
+      "runner",
+      "endless",
+      "arcade"
+    ]
   },
   {
     "id": "ski-lemming",
@@ -27,6 +35,24 @@
     "path": "/games/ski-lemming/",
     "color": "#a8d8ff",
     "added": "2026-05-29",
-    "tags": ["arcade", "endless", "skill"]
+    "tags": [
+      "arcade",
+      "endless",
+      "skill"
+    ]
+  },
+  {
+    "id": "word-hunter",
+    "name": "Word Hunter",
+    "subtitle": "MSDOS EDITION",
+    "description": "Descubra a palavra secreta antes que seja tarde demais. Jogo clássico de forca com visual retrô de DOS.",
+    "path": "/games/word-hunter/",
+    "color": "#0f0",
+    "added": "2026-06-17",
+    "tags": [
+      "puzzle",
+      "classic",
+      "retro"
+    ]
   }
 ]

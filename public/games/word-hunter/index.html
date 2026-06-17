@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Hunter — MSDOS Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: #0a0a0a;
+            font-family: 'VT323', 'Courier New', monospace;
+            image-rendering: pixelated;
+            -webkit-font-smoothing: none;
+            color: #0f0;
+            overflow-x: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* CRT Screen Effect */
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            max-width: 100vw;
+            background: #000;
+            border: 12px solid #333;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 2px #555,
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 100px rgba(0, 255, 0, 0.1);
+        }
+
+        #gameContainer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 0, 0.03) 2px,
+                    rgba(0, 255, 0, 0.03) 4px);
+            pointer-events: none;
+            z-index: 100;
+            animation: scanlines 0.1s linear infinite;
+        }
+
+        #gameContainer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center,
+                    transparent 0%,
+                    transparent 70%,
+                    rgba(0, 20, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 101;
+        }
+
+        @keyframes scanlines {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(4px);
+            }
+        }
+
+        /* Screen flicker */
+        .screen-flicker {
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.98;
+            }
+        }
+
+        /* Glow text effect */
+        .glow {
+            text-shadow:
+                0 0 5px #0f0,
+                0 0 10px #0f0,
+                0 0 20px #0f0;
+        }
+
+        .glow-amber {
+            color: #ffb000;
+            text-shadow:
+                0 0 5px #ffb000,
+                0 0 10px #ffb000,
+                0 0 20px #ff8000;
+        }
+
+        .glow-red {
+            color: #f00;
+            text-shadow:
+                0 0 5px #f00,
+                0 0 10px #f00;
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background: #000;
+            z-index: 1;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        /* Boot sequence */
+        #bootScreen {
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .boot-line {
+            opacity: 0;
+            animation: typeIn 0.05s forwards;
+        }
+
+        @keyframes typeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: #0f0;
+            animation: blink 0.5s step-end infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Title Screen */
+        #titleScreen .ascii-title {
+            font-size: 14px;
+            line-height: 1.2;
+            white-space: pre;
+            color: #0f0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        #titleScreen .menu {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .menu-item {
+            font-size: 24px;
+            padding: 10px 30px;
+            margin: 10px 0;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.1s;
+            color: #0a0;
+        }
+
+        .menu-item:hover,
+        .menu-item.selected {
+            color: #0f0;
+            border-color: #0f0;
+            background: rgba(0, 255, 0, 0.1);
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        /* Name Entry */
+        #nameScreen .prompt {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #nameScreen input {
+            font-family: 'VT323', monospace;
+            font-size: 32px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #0f0;
+            color: #0f0;
+            text-align: center;
+            width: 300px;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        #nameScreen input:focus {
+            box-shadow: 0 5px 20px rgba(0, 255, 0, 0.3);
+        }
+
+        /* Game Screen Layout */
+        #gameScreen {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 20px;
+        }
+
+        .game-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .left-panel {
+            width: 200px;
+            border-right: 1px solid #0a0;
+            padding-right: 20px;
+        }
+
+        .center-panel {
+            flex: 1;
+            padding: 0 20px;
+        }
+
+        .right-panel {
+            width: 180px;
+            border-left: 1px solid #0a0;
+            padding-left: 20px;
+            align-items: flex-start;
+        }
+
+        /* Hangman ASCII Art */
+        #hangmanDisplay {
+            font-size: 14px;
+            line-height: 1.1;
+            white-space: pre;
+            color: #0f0;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Word Display */
+        #wordDisplay {
+            font-size: 48px;
+            letter-spacing: 12px;
+            color: #0f0;
+            text-align: center;
+            margin: 30px 0;
+            min-height: 60px;
+        }
+
+        .letter {
+            display: inline-block;
+            border-bottom: 3px solid #0f0;
+            min-width: 40px;
+            margin: 0 4px;
+            text-align: center;
+        }
+
+        .letter.revealed {
+            border-bottom-color: transparent;
+            animation: reveal 0.3s ease;
+        }
+
+        @keyframes reveal {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Keyboard */
+        #keyboard {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            margin-top: 30px;
+            max-width: 500px;
+        }
+
+        .key {
+            aspect-ratio: 1;
+            background: #050505;
+            border: 2px solid #0a0;
+            color: #0a0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-family: 'VT323', monospace;
+            min-width: 40px;
+            min-height: 40px;
+        }
+
+        .key:hover:not(.used) {
+            border-color: #0f0;
+            color: #0f0;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .key.used {
+            background: #111;
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+        }
+
+        .key.correct {
+            background: #0f0;
+            color: #000;
+            border-color: #0f0;
+        }
+
+        .key.wrong {
+            background: #300;
+            border-color: #f00;
+            color: #f00;
+        }
+
+        /* HUD */
+        .hud-section {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .hud-label {
+            font-size: 14px;
+            color: #0a0;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .hud-value {
+            font-size: 28px;
+            color: #0f0;
+        }
+
+        .timer.warning {
+            color: #ffb000;
+            animation: pulse 0.5s infinite;
+        }
+
+        .timer.danger {
+            color: #f00;
+            animation: pulse 0.3s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Used Letters */
+        #usedLetters {
+            font-size: 16px;
+            line-height: 1.4;
+            color: #0a0;
+            word-wrap: break-word;
+        }
+
+        #usedLetters .wrong-letter {
+            color: #f00;
+            text-decoration: line-through;
+        }
+
+        #usedLetters .correct-letter {
+            color: #0f0;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen .result-title {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 64px;
+            margin: 20px 0;
+        }
+
+        /* Top 10 Panel */
+        .top-panel {
+            background: #050505;
+            border: 2px solid #0a0;
+            padding: 15px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .top-row {
+            display: grid;
+            grid-template-columns: 50px 1fr auto;
+            gap: 10px;
+            padding: 8px;
+            font-size: 16px;
+            border-bottom: 1px solid #0a0;
+        }
+
+        .top-row.gold {
+            color: #ffd700;
+        }
+
+        .top-row.silver {
+            color: #c0c0c0;
+        }
+
+        .top-row.bronze {
+            color: #cd7f32;
+        }
+
+        /* Mode selector */
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 2px solid #0a0;
+            color: #0a0;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            border-color: #0f0;
+            color: #0f0;
+            background: rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+        }
+
+        /* Progress bar for timer */
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: #0a0a0a;
+            border: 1px solid #0a0;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: #0f0;
+            transition: width 0.1s linear, background 0.3s;
+        }
+
+        .timer-fill.warning {
+            background: #ffb000;
+        }
+
+        .timer-fill.danger {
+            background: #f00;
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            padding: 12px 30px;
+            background: #000;
+            border: 2px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #0a0;
+            letter-spacing: 3px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0a0;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0f0;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #gameContainer {
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                border: none;
+                border-radius: 0;
+            }
+
+            #gameScreen {
+                flex-direction: column;
+            }
+
+            .left-panel,
+            .right-panel {
+                width: 100%;
+                border: none;
+                border-bottom: 1px solid #0a0;
+                padding: 10px 0;
+            }
+
+            #wordDisplay {
+                font-size: 32px;
+                letter-spacing: 8px;
+            }
+
+            #keyboard {
+                grid-template-columns: repeat(7, 1fr);
+            }
+
+            .key {
+                min-width: 35px;
+                min-height: 35px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer" class="screen-flicker">
+        <!-- Boot Sequence -->
+        <div id="bootScreen" class="screen">
+            <div id="bootText"></div>
+            <span class="cursor"></span>
+        </div>
+
+        <!-- Title Screen -->
+        <div id="titleScreen" class="screen hidden">
+            <div class="ascii-title glow">
+                ╔═══════════════════════════════════════════════════════════════╗
+                ║ _ _ _ _ _ ║
+                ║ | | | | | | | | | | ║
+                ║ | | | | ___ _ __ | | _| | _ _ ___| |_ ___ _ __ ___ ║
+                ║ | |/\| | / _ \ | '__|| |/ / || | | |/ __| __|/ _ \| '_ ` _ \ ║
+                ║ \ /\ /| (_) || | | <| || |_| |\__ \ |_| __/| | | | | |║ ║ \/ \/ \___/ |_| |_|
+                    \_\__|\__,_||___/\__|\___||_| |_| |_|║ ║ ║ ║ ████████████████████ ║ ║ █ MSDOS EDITION v1.0 █ ║ ║
+                    ████████████████████ ║ ╚═══════════════════════════════════════════════════════════════╝ </div>
+                    <div class="menu">
+                        <div class="menu-item selected" data-action="start">► INICIAR JOGO</div>
+                        <div class="menu-item" data-action="top10">► TOP 10</div>
+                        <div class="menu-item" data-action="instructions">► INSTRUÇÕES</div>
+                        <div class="menu-item" data-action="hub">► VOLTAR AO HUB</div>
+                    </div>
+                    <div style="margin-top: 40px; font-size: 14px; color: #0a0;">
+                        Use ↑↓ para navegar • ENTER para selecionar
+                    </div>
+            </div>
+
+            <!-- Instructions Screen -->
+            <div id="instructionsScreen" class="screen hidden">
+                <div class="glow" style="font-size: 32px; margin-bottom: 30px;">INSTRUÇÕES</div>
+                <div style="font-size: 18px; line-height: 1.8; max-width: 600px; color: #0a0;">
+                    <p><span class="glow">OBJETIVO:</span> Descubra a palavra secreta antes que o tempo acabe ou o
+                        boneco seja enforcado.</p>
+                    <p><span class="glow">COMO JOGAR:</span></p>
+                    <p>• Digite uma letra ou clique no teclado virtual</p>
+                    <p>• Letras corretas aparecem na palavra</p>
+                    <p>• Letras erradas desenham o boneco (7 chances)</p>
+                    <p>• Modo Timer: Acerte rápido para ganhar bônus!</p>
+                    <br>
+                    <p style="color: #ffb000;">PONTUAÇÃO: +100 por palavra + bônus de tempo + bônus de chances restantes
+                    </p>
+                </div>
+                <button class="btn" onclick="showScreen('titleScreen')" style="margin-top: 30px;">VOLTAR</button>
+            </div>
+
+            <!-- Name Entry Screen -->
+            <div id="nameScreen" class="screen hidden">
+                <div class="prompt glow">DIGITE SEU NOME:</div>
+                <input type="text" id="playerName" maxlength="12" autocomplete="off" placeholder="__________">
+                <div style="margin-top: 30px;">
+                    <div class="prompt" style="font-size: 18px; color: #0a0; margin-bottom: 10px;">MODO DE JOGO:</div>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="normal">NORMAL</button>
+                        <button class="mode-btn" data-mode="timed">CONTRA O TEMPO</button>
+                    </div>
+                </div>
+                <button class="btn" onclick="startGame()" style="margin-top: 30px;">JOGAR</button>
+                <button class="btn" onclick="showScreen('titleScreen')"
+                    style="border-color: #0a0; color: #0a0;">VOLTAR</button>
+            </div>
+
+            <!-- Game Screen -->
+            <div id="gameScreen" class="screen hidden">
+                <div class="game-panel left-panel">
+                    <div class="hud-section">
+                        <div class="hud-label">JOGADOR</div>
+                        <div class="hud-value" id="playerNameDisplay">-</div>
+                    </div>
+                    <div class="hud-section">
+                        <div class="hud-label">PONTOS</div>
+                        <div class="hud-value glow" id="scoreDisplay">0</div>
+                    </div>
+                    <div class="hud-section">
+                        <div class="hud-label">PALAVRAS</div>
+                        <div class="hud-value" id="wordsDisplay">0</div>
+                    </div>
+                    <div class="hud-section" id="timerSection" style="display: none;">
+                        <div class="hud-label">TEMPO</div>
+                        <div class="hud-value timer" id="timerDisplay">60</div>
+                        <div class="timer-bar">
+                            <div class="timer-fill" id="timerBar" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-panel center-panel">
+                    <div id="hangmanDisplay"></div>
+                    <div id="wordDisplay"></div>
+                    <div id="keyboard"></div>
+                </div>
+
+                <div class="game-panel right-panel">
+                    <div class="hud-section">
+                        <div class="hud-label">CHANCES</div>
+                        <div class="hud-value glow" id="livesDisplay">7</div>
+                    </div>
+                    <div class="hud-section">
+                        <div class="hud-label">LETRAS USADAS</div>
+                        <div id="usedLetters"></div>
+                    </div>
+                    <button class="btn" onclick="giveUp()"
+                        style="margin-top: auto; font-size: 14px; padding: 8px 15px;">DESISTIR</button>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="gameOverScreen" class="screen hidden">
+                <div class="result-title glow" id="resultTitle">VITÓRIA!</div>
+                <div style="font-size: 20px; margin-bottom: 10px;">A palavra era: <span class="glow-amber"
+                        id="revealWord"></span></div>
+                <div class="score-display glow" id="finalScore">0</div>
+                <div class="top-panel">
+                    <div style="text-align: center; border-bottom: 1px solid #0a0; padding-bottom: 10px; margin-bottom: 10px;"
+                        class="glow">
+                        ★ TOP 10 CAÇADORES DE PALAVRAS ★
+                    </div>
+                    <div id="top10List">
+                        <div style="text-align:center;color:#0a0;padding:20px;">CARREGANDO...</div>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn" onclick="nextWord()">PRÓXIMA PALAVRA</button>
+                    <button class="btn" onclick="location.reload()">MENU PRINCIPAL</button>
+                </div>
+            </div>
+
+            <!-- Top 10 Screen -->
+            <div id="top10Screen" class="screen hidden">
+                <div class="glow" style="font-size: 36px; margin-bottom: 20px;">TOP 10 RECORDES</div>
+                <div class="top-panel" style="max-height: 350px;">
+                    <div id="top10ListStandalone">
+                        <div style="text-align:center;color:#0a0;padding:20px;">CARREGANDO...</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="showScreen('titleScreen')">VOLTAR</button>
+            </div>
+        </div>
+
+        <div class="footer">WORD HUNTER v1.0 ∙ MSDOS EDITION</div>
+
+        <script>
+            // ═══════════════════════════════════════════════════════════════════
+            // WORD HUNTER - Hangman Game with MSDOS Aesthetic
+            // ═══════════════════════════════════════════════════════════════════
+
+            // Game State
+            let gameState = {
+                playerName: '',
+                score: 0,
+                wordsSolved: 0,
+                currentWord: '',
+                guessedLetters: [],
+                wrongLetters: [],
+                lives: 7,
+                gameMode: 'normal', // 'normal' or 'timed'
+                timer: null,
+                timeLeft: 60,
+                maxTime: 60,
+                isGameOver: false,
+                isPaused: false
+            };
+
+            // Word Dictionary (PT-BR focused with some English)
+            const wordDictionary = [
+                // Technology
+                'COMPUTADOR', 'TECLADO', 'MOUSE', 'MONITOR', 'INTERNET', 'PROGRAMA', 'SISTEMA', 'MEMORIA', 'DISCO', 'PROCESSADOR',
+                'ALGORITMO', 'COMPILADOR', 'INTERFACE', 'PROTOCOLO', 'BANDWIDTH', 'FIREWALL', 'DATABASE', 'FRAMEWORK', 'LIBRARY',
+                // Nature
+                'FLORESTA', 'MONTANHA', 'OCEANO', 'DESERTO', 'CACHOEIRA', 'VULCAO', 'PLANETA', 'GALAXIA', 'ESTRELA', 'COMETA',
+                'ASTERISMO', 'NEBULOSA', 'ATMOSFERA', 'BIODIVERSIDADE', 'ECOSSISTEMA', 'PRECIPITACAO', 'ECLIPSE',
+                // Animals
+                'ELEFANTE', 'GIRAFA', 'TIGRE', 'LEAO', 'PANDA', 'GOLFINHO', 'TUBARAO', 'AGUIA', 'FALCAO', 'CORUJA',
+                'CROCODILO', 'CAMALEON', 'BORBOLETA', 'LIBELULA', 'TARANTULA', 'ORNITORRINCO', 'HIPOPOTAMO', 'RINOCERONTE',
+                // Food
+                'CHOCOLATE', 'PIZZA', 'HAMBURGUER', 'SORVETE', 'LASANHA', 'MACARRONADA', 'CHURRASCO', 'FEIJOADA', 'ACAI',
+                'TAPIOCA', 'BRIGADEIRO', 'COXINHA', 'PASTEL', 'EMPADA', 'BISCOITO', 'BROWNIE', 'CHEESECAKE', 'TIRAMISU',
+                // Places
+                'BRASIL', 'PORTUGAL', 'JAPAO', 'AUSTRALIA', 'CANADA', 'ALEMANHA', 'FRANCA', 'ITALIA', 'EGITO', 'PERU',
+                'AMAZONIA', 'PATAGONIA', 'CARIBE', 'HIMALAIA', 'SAHARA', 'ALPES', 'ANDES', 'ROMA', 'PARIS', 'TOQUIO',
+                // Objects
+                'BICICLETA', 'TELEFONE', 'CADERNO', 'LIVRARIA', 'BIBLIOTECA', 'UNIVERSIDADE', 'HOSPITAL', 'AEROPORTO',
+                'CATEDRAL', 'CASTELO', 'PALACIO', 'MUSEU', 'TEATRO', 'CINEMA', 'ESTADIO', 'LABORATORIO', 'OFICINA',
+                // Abstract
+                'LIBERDADE', 'JUSTICA', 'DEMOCRACIA', 'AMIZADE', 'ESPERANCA', 'CRIATIVIDADE', 'INTELIGENCIA', 'SABEDORIA',
+                'CORAGEM', 'HONESTIDADE', 'HUMILDADE', 'GRATIDAO', 'SOLIDARIEDADE', 'PERSEVERANCA', 'DETERMINACAO',
+                // Space
+                'ASTRONAUTA', 'NAVESPACIAL', 'SATELITE', 'GRAVIDADE', 'ORBITA', 'COSMOS', 'UNIVERSO', 'CONSTELACAO',
+                'SUPERNOVA', 'BURACONEGRO', 'TELESCOPIO', 'ASTRONOMIA', 'AEROSPACE', 'SPACESHIP',
+                // Misc
+                'ADVENTURE', 'MYSTERY', 'LEGENDARY', 'EPHEMERAL', 'SERENDIPITY', 'ELOQUENT', 'VIVACIOUS', 'RESILIENT',
+                'MAGNIFICENT', 'EXTRAORDINARY', 'PHENOMENAL', 'SPECTACULAR', 'INCREDIBLE', 'FANTASTIC', 'WONDERFUL'
+            ];
+
+            // ASCII Hangman Stages
+            const hangmanStages = [
+                // Stage 0: Empty gallows
+                `
+    ┌─────────┐
+    │         │
+    │         
+    │         
+    │         
+    │         
+    │
+   ═╧═══════`,
+                // Stage 1: Head
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │         
+    │         
+    │         
+    │
+   ═╧═══════`,
+                // Stage 2: Body
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │         │
+    │         │
+    │         
+    │
+   ═╧═══════`,
+                // Stage 3: Left arm
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │        /│
+    │         │
+    │         
+    │
+   ═╧═══════`,
+                // Stage 4: Right arm
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │        /│\\
+    │         │
+    │         
+    │
+   ═╧═══════`,
+                // Stage 5: Left leg
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │        /│\\
+    │         │
+    │        / 
+    │
+   ═╧═══════`,
+                // Stage 6: Right leg
+                `
+    ┌─────────┐
+    │         │
+    │        😵
+    │        /│\\
+    │         │
+    │        / \\
+    │
+   ═╧═══════`,
+                // Stage 7: Dead
+                `
+    ┌─────────┐
+    │         │
+    │        💀
+    │        /│\\
+    │         │
+    │        / \\
+    │
+   ═╧═══════`
+            ];
+
+            // Boot sequence text
+            const bootText = [
+                'BIOS DATE 01/15/86 14:22:55 VER 1.02',
+                'CPU: NEC V20, Speed: 8 MHz',
+                '640K RAM SYSTEM... OK',
+                '',
+                'C:\\>CD GAMES',
+                'C:\\GAMES>DIR',
+                '',
+                ' VOLUME IN DRIVE C IS MS-DOS_6',
+                ' DIRECTORY OF C:\\GAMES',
+                '',
+                'WORDHUNT EXE     45,120  06-17-86  4:38p',
+                'CONFIG   SYS        128  01-15-86  9:00a',
+                '         2 file(s)     45,248 bytes',
+                '',
+                'C:\\GAMES>WORDHUNT.EXE',
+                '',
+                'Loading Word Hunter...',
+                'Initializing graphics... OK',
+                'Loading dictionary... 847 words loaded',
+                'Initializing sound... PC SPEAKER READY',
+                '',
+                '╔═══════════════════════════════════════════════════════════════╗',
+                '║               WORD HUNTER v1.0 - MSDOS EDITION                ║',
+                '║              (C) 1986 Retro Games Software Inc.               ║',
+                '╚═══════════════════════════════════════════════════════════════╝',
+                '',
+                'Press any key to continue...'
+            ];
+
+            // Sound effects (PC Speaker style)
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            function playSound(type) {
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                switch (type) {
+                    case 'key':
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(880, now);
+                        osc.frequency.exponentialRampToValueAtTime(440, now + 0.05);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                        break;
+                    case 'correct':
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(523.25, now);
+                        osc.frequency.setValueAtTime(659.25, now + 0.1);
+                        osc.frequency.setValueAtTime(783.99, now + 0.2);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                        break;
+                    case 'wrong':
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                        break;
+                    case 'win':
+                        osc.type = 'square';
+                        [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50].forEach((freq, i) => {
+                            osc.frequency.setValueAtTime(freq, now + i * 0.1);
+                        });
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.6);
+                        osc.start(now);
+                        osc.stop(now + 0.6);
+                        break;
+                    case 'lose':
+                        osc.type = 'square';
+                        [200, 180, 160, 140, 120].forEach((freq, i) => {
+                            osc.frequency.setValueAtTime(freq, now + i * 0.2);
+                        });
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 1);
+                        osc.start(now);
+                        osc.stop(now + 1);
+                        break;
+                    case 'beep':
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(1000, now);
+                        gain.gain.setValueAtTime(0.05, now);
+                        gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                        break;
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // UI Functions
+            // ═══════════════════════════════════════════════════════════════════
+
+            function showScreen(screenId) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+                document.getElementById(screenId).classList.remove('hidden');
+            }
+
+            function typeBootSequence() {
+                const container = document.getElementById('bootText');
+                container.innerHTML = '';
+                let lineIndex = 0;
+
+                function typeLine() {
+                    if (lineIndex >= bootText.length) {
+                        setTimeout(() => showScreen('titleScreen'), 500);
+                        return;
+                    }
+
+                    const line = document.createElement('div');
+                    line.className = 'boot-line';
+                    line.style.animationDelay = `${lineIndex * 0.05}s`;
+                    line.textContent = bootText[lineIndex];
+                    container.appendChild(line);
+
+                    playSound('beep');
+                    lineIndex++;
+                    setTimeout(typeLine, 50);
+                }
+
+                typeLine();
+            }
+
+            // Menu navigation
+            let selectedMenuItem = 0;
+            const menuItems = document.querySelectorAll('.menu-item');
+
+            function updateMenuSelection() {
+                menuItems.forEach((item, index) => {
+                    item.classList.toggle('selected', index === selectedMenuItem);
+                });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (!document.getElementById('titleScreen').classList.contains('hidden')) {
+                    if (e.key === 'ArrowDown') {
+                        selectedMenuItem = (selectedMenuItem + 1) % menuItems.length;
+                        updateMenuSelection();
+                        playSound('beep');
+                    } else if (e.key === 'ArrowUp') {
+                        selectedMenuItem = (selectedMenuItem - 1 + menuItems.length) % menuItems.length;
+                        updateMenuSelection();
+                        playSound('beep');
+                    } else if (e.key === 'Enter') {
+                        const action = menuItems[selectedMenuItem].dataset.action;
+                        handleMenuAction(action);
+                    }
+                }
+
+                // Game keyboard input
+                if (!document.getElementById('gameScreen').classList.contains('hidden') && !gameState.isPaused) {
+                    const key = e.key.toUpperCase();
+                    if (key.match(/^[A-Z]$/) && !gameState.isGameOver) {
+                        handleGuess(key);
+                    }
+                }
+            });
+
+            function handleMenuAction(action) {
+                playSound('key');
+                switch (action) {
+                    case 'start':
+                        showScreen('nameScreen');
+                        document.getElementById('playerName').focus();
+                        break;
+                    case 'top10':
+                        showTop10();
+                        break;
+                    case 'instructions':
+                        showScreen('instructionsScreen');
+                        break;
+                    case 'hub':
+                        window.location.href = '/';
+                        break;
+                }
+            }
+
+            // Mode selector
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameState.gameMode = btn.dataset.mode;
+                    playSound('beep');
+                });
+            });
+
+            // ═══════════════════════════════════════════════════════════════════
+            // Game Logic
+            // ═══════════════════════════════════════════════════════════════════
+
+            function startGame() {
+                const name = document.getElementById('playerName').value.trim().toUpperCase();
+                if (!name) {
+                    document.getElementById('playerName').style.borderColor = '#f00';
+                    return;
+                }
+
+                gameState.playerName = name.slice(0, 12);
+                gameState.score = 0;
+                gameState.wordsSolved = 0;
+                gameState.isGameOver = false;
+
+                document.getElementById('playerNameDisplay').textContent = gameState.playerName;
+                document.getElementById('timerSection').style.display = gameState.gameMode === 'timed' ? 'block' : 'none';
+
+                nextWord();
+            }
+
+            function nextWord() {
+                gameState.guessedLetters = [];
+                gameState.wrongLetters = [];
+                gameState.lives = 7;
+                gameState.currentWord = wordDictionary[Math.floor(Math.random() * wordDictionary.length)];
+                gameState.isGameOver = false;
+                gameState.isPaused = false;
+
+                if (gameState.gameMode === 'timed') {
+                    gameState.timeLeft = Math.max(30, 60 - gameState.wordsSolved * 2);
+                    gameState.maxTime = gameState.timeLeft;
+                    startTimer();
+                }
+
+                updateDisplay();
+                createKeyboard();
+                showScreen('gameScreen');
+            }
+
+            function startTimer() {
+                if (gameState.timer) clearInterval(gameState.timer);
+
+                gameState.timer = setInterval(() => {
+                    if (gameState.isPaused || gameState.isGameOver) return;
+
+                    gameState.timeLeft--;
+                    updateTimerDisplay();
+
+                    if (gameState.timeLeft <= 0) {
+                        clearInterval(gameState.timer);
+                        gameOver(false, 'TIME UP');
+                    }
+                }, 1000);
+            }
+
+            function updateTimerDisplay() {
+                const timerEl = document.getElementById('timerDisplay');
+                const barEl = document.getElementById('timerBar');
+
+                timerEl.textContent = gameState.timeLeft;
+                const percentage = (gameState.timeLeft / gameState.maxTime) * 100;
+                barEl.style.width = `${percentage}%`;
+
+                timerEl.classList.remove('warning', 'danger');
+                barEl.classList.remove('warning', 'danger');
+
+                if (gameState.timeLeft <= 10) {
+                    timerEl.classList.add('danger');
+                    barEl.classList.add('danger');
+                    if (gameState.timeLeft > 0) playSound('beep');
+                } else if (gameState.timeLeft <= 20) {
+                    timerEl.classList.add('warning');
+                    barEl.classList.add('warning');
+                }
+            }
+
+            function createKeyboard() {
+                const keyboard = document.getElementById('keyboard');
+                keyboard.innerHTML = '';
+
+                'QWERTYUIOPASDFGHJKLZXCVBNM'.split('').forEach(letter => {
+                    const key = document.createElement('button');
+                    key.className = 'key';
+                    key.textContent = letter;
+                    key.dataset.letter = letter;
+                    key.onclick = () => handleGuess(letter);
+                    keyboard.appendChild(key);
+                });
+            }
+
+            function handleGuess(letter) {
+                if (gameState.guessedLetters.includes(letter) || gameState.isGameOver) return;
+
+                gameState.guessedLetters.push(letter);
+                const keyEl = document.querySelector(`.key[data-letter="${letter}"]`);
+                keyEl.classList.add('used');
+
+                if (gameState.currentWord.includes(letter)) {
+                    // Correct guess
+                    keyEl.classList.add('correct');
+                    playSound('correct');
+                    updateDisplay();
+
+                    // Check win condition
+                    const wordLetters = [...new Set(gameState.currentWord.split(''))];
+                    const allGuessed = wordLetters.every(l => gameState.guessedLetters.includes(l));
+                    if (allGuessed) {
+                        gameOver(true);
+                    }
+                } else {
+                    // Wrong guess
+                    gameState.wrongLetters.push(letter);
+                    gameState.lives--;
+                    keyEl.classList.add('wrong');
+                    playSound('wrong');
+                    updateDisplay();
+
+                    if (gameState.lives <= 0) {
+                        gameOver(false);
+                    }
+                }
+            }
+
+            function updateDisplay() {
+                // Update hangman
+                const stage = 7 - gameState.lives;
+                document.getElementById('hangmanDisplay').textContent = hangmanStages[stage];
+
+                // Update word display
+                const wordContainer = document.getElementById('wordDisplay');
+                wordContainer.innerHTML = '';
+                gameState.currentWord.split('').forEach(letter => {
+                    const span = document.createElement('span');
+                    span.className = 'letter';
+                    if (gameState.guessedLetters.includes(letter)) {
+                        span.classList.add('revealed');
+                        span.textContent = letter;
+                    }
+                    wordContainer.appendChild(span);
+                });
+
+                // Update HUD
+                document.getElementById('scoreDisplay').textContent = gameState.score;
+                document.getElementById('wordsDisplay').textContent = gameState.wordsSolved;
+                document.getElementById('livesDisplay').textContent = gameState.lives;
+
+                // Update used letters
+                const usedContainer = document.getElementById('usedLetters');
+                usedContainer.innerHTML = '';
+                gameState.guessedLetters.forEach(letter => {
+                    const span = document.createElement('span');
+                    span.textContent = letter + ' ';
+                    span.className = gameState.currentWord.includes(letter) ? 'correct-letter' : 'wrong-letter';
+                    usedContainer.appendChild(span);
+                });
+            }
+
+            function gameOver(won, reason) {
+                gameState.isGameOver = true;
+                if (gameState.timer) clearInterval(gameState.timer);
+
+                // Calculate score
+                let roundScore = 0;
+                if (won) {
+                    roundScore = 100;
+                    roundScore += gameState.lives * 50; // Bonus for remaining lives
+
+                    if (gameState.gameMode === 'timed') {
+                        roundScore += gameState.timeLeft * 10; // Time bonus
+                    }
+
+                    gameState.score += roundScore;
+                    gameState.wordsSolved++;
+                    playSound('win');
+                } else {
+                    playSound('lose');
+                }
+
+                // Update game over screen
+                document.getElementById('resultTitle').textContent = won ? 'VITÓRIA!' : 'GAME OVER';
+                document.getElementById('resultTitle').className = won ? 'result-title glow' : 'result-title glow-red';
+                document.getElementById('revealWord').textContent = gameState.currentWord;
+                document.getElementById('finalScore').textContent = gameState.score;
+
+                // Submit score and show top 10
+                submitScore();
+                showScreen('gameOverScreen');
+            }
+
+            function giveUp() {
+                if (confirm('Deseja realmente desistir?')) {
+                    gameOver(false, 'GAVE UP');
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // Score API
+            // ═══════════════════════════════════════════════════════════════════
+
+            async function submitScore() {
+                try {
+                    await fetch('/api/scores/word-hunter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: gameState.playerName,
+                            score: gameState.score
+                        })
+                    });
+                } catch (e) {
+                    console.error('Failed to submit score:', e);
+                }
+                await updateTop10List('top10List');
+            }
+
+            async function fetchTopScores() {
+                try {
+                    const res = await fetch('/api/scores/word-hunter');
+                    return await res.json();
+                } catch (e) {
+                    console.error('Failed to fetch scores:', e);
+                    return [];
+                }
+            }
+
+            async function updateTop10List(elementId) {
+                const top = await fetchTopScores();
+                const container = document.getElementById(elementId);
+
+                if (!top || !top.length) {
+                    container.innerHTML = '<div style="text-align:center;color:#0a0;padding:20px;">SEM RECORDES AINDA</div>';
+                    return;
+                }
+
+                let html = '';
+                top.forEach((s, i) => {
+                    const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                    const icon = i === 0 ? '★' : i === 1 ? '◆' : i === 2 ? '●' : `${i + 1}.`;
+                    html += `
+          <div class="top-row ${cls}">
+            <div style="text-align:center;">${icon}</div>
+            <div>${s.name}</div>
+            <div style="text-align:right;">${s.score}</div>
+          </div>`;
+                });
+
+                container.innerHTML = html;
+            }
+
+            async function showTop10() {
+                await updateTop10List('top10ListStandalone');
+                showScreen('top10Screen');
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // Initialization
+            // ═══════════════════════════════════════════════════════════════════
+
+            // Click on menu items
+            menuItems.forEach((item, index) => {
+                item.addEventListener('click', () => {
+                    selectedMenuItem = index;
+                    updateMenuSelection();
+                    handleMenuAction(item.dataset.action);
+                });
+                item.addEventListener('mouseenter', () => {
+                    selectedMenuItem = index;
+                    updateMenuSelection();
+                });
+            });
+
+            // Start boot sequence
+            typeBootSequence();
+
+            // Keyboard shortcuts for boot
+            document.addEventListener('keydown', function skipBoot(e) {
+                if (!document.getElementById('bootScreen').classList.contains('hidden')) {
+                    showScreen('titleScreen');
+                    document.removeEventListener('keydown', skipBoot);
+                }
+            });
+        </script>
+</body>
+
+</html>
