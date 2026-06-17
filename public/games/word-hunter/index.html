@@ -767,11 +767,11 @@
                 isPaused: false
             };
 
-            // Word Dictionary (PT-BR focused with some English)
+            // Word Dictionary (PT-BR only)
             const wordDictionary = [
                 // Technology
                 'COMPUTADOR', 'TECLADO', 'MOUSE', 'MONITOR', 'INTERNET', 'PROGRAMA', 'SISTEMA', 'MEMORIA', 'DISCO', 'PROCESSADOR',
-                'ALGORITMO', 'COMPILADOR', 'INTERFACE', 'PROTOCOLO', 'BANDWIDTH', 'FIREWALL', 'DATABASE', 'FRAMEWORK', 'LIBRARY',
+                'ALGORITMO', 'COMPILADOR', 'INTERFACE', 'PROTOCOLO', 'LARGURADEBANDA', 'CORTAFUEGO', 'BANCODEDADOS', 'ARQUITETURA', 'BIBLIOTECA',
                 // Nature
                 'FLORESTA', 'MONTANHA', 'OCEANO', 'DESERTO', 'CACHOEIRA', 'VULCAO', 'PLANETA', 'GALAXIA', 'ESTRELA', 'COMETA',
                 'ASTERISMO', 'NEBULOSA', 'ATMOSFERA', 'BIODIVERSIDADE', 'ECOSSISTEMA', 'PRECIPITACAO', 'ECLIPSE',
@@ -792,10 +792,10 @@
                 'CORAGEM', 'HONESTIDADE', 'HUMILDADE', 'GRATIDAO', 'SOLIDARIEDADE', 'PERSEVERANCA', 'DETERMINACAO',
                 // Space
                 'ASTRONAUTA', 'NAVESPACIAL', 'SATELITE', 'GRAVIDADE', 'ORBITA', 'COSMOS', 'UNIVERSO', 'CONSTELACAO',
-                'SUPERNOVA', 'BURACONEGRO', 'TELESCOPIO', 'ASTRONOMIA', 'AEROSPACE', 'SPACESHIP',
+                'SUPERNOVA', 'BURACONEGRO', 'TELESCOPIO', 'ASTRONOMIA', 'AERONAUTICA', 'NAVES',
                 // Misc
-                'ADVENTURE', 'MYSTERY', 'LEGENDARY', 'EPHEMERAL', 'SERENDIPITY', 'ELOQUENT', 'VIVACIOUS', 'RESILIENT',
-                'MAGNIFICENT', 'EXTRAORDINARY', 'PHENOMENAL', 'SPECTACULAR', 'INCREDIBLE', 'FANTASTIC', 'WONDERFUL'
+                'AVENTURA', 'MISTERIO', 'LENDARIO', 'EFEMERO', 'FELICIDADE', 'ELOQUENCIA', 'VIVACIDADE', 'RESILIENCIA',
+                'MAGNIFICO', 'EXTRAORDINARIO', 'FENOMENAL', 'ESPETACULAR', 'INCRÍVEL', 'FANTASTICO', 'MARAVILHOSO'
             ];
 
             // ASCII Hangman Stages
@@ -994,6 +994,8 @@
                 document.getElementById(screenId).classList.remove('hidden');
             }
 
+            let bootComplete = false;
+
             function typeBootSequence() {
                 const container = document.getElementById('bootText');
                 container.innerHTML = '';
@@ -1001,7 +1003,7 @@
 
                 function typeLine() {
                     if (lineIndex >= bootText.length) {
-                        setTimeout(() => showScreen('titleScreen'), 500);
+                        bootComplete = true;
                         return;
                     }
 
@@ -1135,7 +1137,7 @@
 
                     if (gameState.timeLeft <= 0) {
                         clearInterval(gameState.timer);
-                        gameOver(false, 'TIME UP');
+                        gameOver(false, 'TEMPO ESGOTADO');
                     }
                 }, 1000);
             }
@@ -1276,7 +1278,7 @@
 
             function giveUp() {
                 if (confirm('Deseja realmente desistir?')) {
-                    gameOver(false, 'GAVE UP');
+                    gameOver(false, 'DESISTIU');
                 }
             }
 
@@ -1359,13 +1361,21 @@
             // Start boot sequence
             typeBootSequence();
 
-            // Keyboard shortcuts for boot
-            document.addEventListener('keydown', function skipBoot(e) {
-                if (!document.getElementById('bootScreen').classList.contains('hidden')) {
+            // Keyboard shortcuts for boot - wait for boot to complete
+            function proceedFromBoot() {
+                if (!document.getElementById('bootScreen').classList.contains('hidden') && bootComplete) {
                     showScreen('titleScreen');
                     document.removeEventListener('keydown', skipBoot);
+                    document.getElementById('bootScreen').removeEventListener('click', proceedFromBoot);
                 }
-            });
+            }
+
+            function skipBoot(e) {
+                proceedFromBoot();
+            }
+
+            document.addEventListener('keydown', skipBoot);
+            document.getElementById('bootScreen').addEventListener('click', proceedFromBoot);
         </script>
 </body>
 
