@@ -583,6 +583,7 @@
         const BULLET_LIFETIME = 40;
         const ASTEROID_BASE_SPEED = 1.5;
         const PARTICLE_LIFETIME = 30;
+        const SHOT_COOLDOWN = 150; // milliseconds between shots
 
         // Game State
         let gameState = {
@@ -609,6 +610,7 @@
         let bullets = [];
         let particles = [];
         let keys = {};
+        let lastShotTime = 0;
 
         // Audio Context
         let audioContext = null;
@@ -907,6 +909,7 @@
             gameState.level = 1;
             gameState.gameRunning = true;
             gameState.paused = false;
+            lastShotTime = 0;
 
             ship = new Ship();
             asteroids = [];
@@ -1163,13 +1166,15 @@
 
                 if (!gameState.paused) {
                     if (e.code === 'Space') {
-                        // Shoot
-                        if (bullets.length < 4) {
+                        // Shoot with cooldown
+                        const now = Date.now();
+                        if (now - lastShotTime >= SHOT_COOLDOWN && bullets.length < 4) {
                             bullets.push(new Bullet(
                                 ship.x + Math.cos(ship.angle) * SHIP_SIZE,
                                 ship.y + Math.sin(ship.angle) * SHIP_SIZE,
                                 ship.angle
                             ));
+                            lastShotTime = now;
                         }
                         e.preventDefault();
                     }
