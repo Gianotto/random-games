@@ -583,7 +583,7 @@
         const BULLET_LIFETIME = 40;
         const ASTEROID_BASE_SPEED = 1.5;
         const PARTICLE_LIFETIME = 30;
-        const SHOT_COOLDOWN = 150; // milliseconds between shots
+        const SHOT_COOLDOWN = 500; // milliseconds between shots - AJUSTÁVEL: altere este valor para mudar a cadência de tiro
 
         // Game State
         let gameState = {
@@ -830,10 +830,11 @@
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.angle);
 
-                ctx.strokeStyle = this.level === 1 ? '#0aa' : this.level === 2 ? '#088' : '#066';
+                // Cores mais brilhantes para melhor visibilidade
+                ctx.strokeStyle = this.level === 1 ? '#0ff' : this.level === 2 ? '#0cc' : '#099';
                 ctx.lineWidth = 2;
                 ctx.shadowColor = ctx.strokeStyle;
-                ctx.shadowBlur = 5;
+                ctx.shadowBlur = 8;
                 ctx.beginPath();
                 ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
                 for (let i = 1; i < this.vertices.length; i++) {
@@ -1094,8 +1095,8 @@
         function gameLoop() {
             if (!gameState.gameRunning) return;
 
-            // Clear with trail effect
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            // Clear canvas completely to prevent brightness accumulation
+            ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
             if (!gameState.paused) {
@@ -1163,22 +1164,6 @@
                     showScreen('title');
                     e.preventDefault();
                 }
-
-                if (!gameState.paused) {
-                    if (e.code === 'Space') {
-                        // Shoot with cooldown
-                        const now = Date.now();
-                        if (now - lastShotTime >= SHOT_COOLDOWN && bullets.length < 4) {
-                            bullets.push(new Bullet(
-                                ship.x + Math.cos(ship.angle) * SHIP_SIZE,
-                                ship.y + Math.sin(ship.angle) * SHIP_SIZE,
-                                ship.angle
-                            ));
-                            lastShotTime = now;
-                        }
-                        e.preventDefault();
-                    }
-                }
             } else if (gameState.screen === 'gameOver') {
                 if (e.code === 'Space') {
                     showScreen('title');
@@ -1196,7 +1181,7 @@
             keys[e.code] = false;
         });
 
-        // Continuous input (thrust and rotation)
+        // Continuous input (thrust, rotation and shooting)
         setInterval(() => {
             if (gameState.screen === 'game' && ship && !gameState.paused) {
                 ship.rotation = 0;
@@ -1205,6 +1190,19 @@
                 if (keys['ArrowLeft']) ship.rotation = -SHIP_ROTATION_SPEED;
                 if (keys['ArrowRight']) ship.rotation = SHIP_ROTATION_SPEED;
                 if (keys['ArrowUp']) ship.thrusting = true;
+
+                // Continuous shooting with cooldown
+                if (keys['Space']) {
+                    const now = Date.now();
+                    if (now - lastShotTime >= SHOT_COOLDOWN && bullets.length < 4) {
+                        bullets.push(new Bullet(
+                            ship.x + Math.cos(ship.angle) * SHIP_SIZE,
+                            ship.y + Math.sin(ship.angle) * SHIP_SIZE,
+                            ship.angle
+                        ));
+                        lastShotTime = now;
+                    }
+                }
             }
         }, 1000 / 60);
 
