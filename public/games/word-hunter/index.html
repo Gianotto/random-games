@@ -1271,8 +1271,10 @@
                 document.getElementById('revealWord').textContent = gameState.currentWord;
                 document.getElementById('finalScore').textContent = gameState.score;
 
-                // Submit score and show top 10
-                submitScore();
+                // Only submit score to TOP10 when game ends (hangman complete or time up)
+                if (!won) {
+                    submitScore();
+                }
                 showScreen('gameOverScreen');
             }
 
