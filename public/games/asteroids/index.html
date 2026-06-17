@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroids — MSDOS Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: #0a0a0a;
+            font-family: 'VT323', 'Courier New', monospace;
+            image-rendering: pixelated;
+            -webkit-font-smoothing: none;
+            color: #0f0;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* CRT Screen Effect */
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            max-width: 100vw;
+            background: #000;
+            border: 12px solid #333;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 2px #555,
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 100px rgba(0, 255, 0, 0.1);
+        }
+
+        #gameContainer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 0, 0.03) 2px,
+                    rgba(0, 255, 0, 0.03) 4px);
+            pointer-events: none;
+            z-index: 100;
+            animation: scanlines 0.1s linear infinite;
+        }
+
+        #gameContainer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center,
+                    transparent 0%,
+                    transparent 70%,
+                    rgba(0, 20, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 101;
+        }
+
+        @keyframes scanlines {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(4px);
+            }
+        }
+
+        .screen-flicker {
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.98;
+            }
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background: #000;
+            z-index: 1;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        /* Glow text effect */
+        .glow {
+            text-shadow:
+                0 0 5px #0f0,
+                0 0 10px #0f0,
+                0 0 20px #0f0;
+        }
+
+        .glow-amber {
+            color: #ffb000;
+            text-shadow:
+                0 0 5px #ffb000,
+                0 0 10px #ffb000,
+                0 0 20px #ff8000;
+        }
+
+        .glow-red {
+            color: #f00;
+            text-shadow:
+                0 0 5px #f00,
+                0 0 10px #f00;
+        }
+
+        /* Boot sequence */
+        #bootScreen {
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .boot-line {
+            opacity: 0;
+            animation: typeIn 0.05s forwards;
+        }
+
+        @keyframes typeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: #0f0;
+            animation: blink 0.5s step-end infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Title Screen */
+        #titleScreen .ascii-title {
+            font-size: 12px;
+            line-height: 1.1;
+            white-space: pre;
+            color: #0f0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        #titleScreen .menu {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .menu-item {
+            font-size: 24px;
+            padding: 10px 30px;
+            margin: 10px 0;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.1s;
+            color: #0a0;
+        }
+
+        .menu-item:hover,
+        .menu-item.selected {
+            color: #0f0;
+            border-color: #0f0;
+            background: rgba(0, 255, 0, 0.1);
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        /* Canvas */
+        #gameCanvas {
+            display: none;
+            background: #000;
+        }
+
+        #gameCanvas.active {
+            display: block;
+        }
+
+        /* HUD */
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            color: #0f0;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .hud-section {
+            display: flex;
+            gap: 30px;
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hud-label {
+            font-size: 14px;
+            color: #0a0;
+            text-transform: uppercase;
+        }
+
+        .hud-value {
+            font-size: 28px;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen .result-title {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 64px;
+            margin: 20px 0;
+        }
+
+        /* Top 10 Panel */
+        .top-panel {
+            background: #050505;
+            border: 2px solid #0a0;
+            padding: 15px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .top-row {
+            display: grid;
+            grid-template-columns: 50px 1fr auto;
+            gap: 10px;
+            padding: 8px;
+            font-size: 16px;
+            border-bottom: 1px solid #0a0;
+        }
+
+        .top-row.gold {
+            color: #ffd700;
+        }
+
+        .top-row.silver {
+            color: #c0c0c0;
+        }
+
+        .top-row.bronze {
+            color: #cd7f32;
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            padding: 12px 30px;
+            background: #000;
+            border: 2px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+        }
+
+        /* Instructions */
+        .instructions-text {
+            font-size: 18px;
+            line-height: 1.8;
+            max-width: 600px;
+            color: #0a0;
+            text-align: center;
+        }
+
+        .instructions-text p {
+            margin: 10px 0;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #0a0;
+            letter-spacing: 3px;
+        }
+
+        /* Name Entry */
+        #nameScreen .prompt {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #nameScreen input {
+            font-family: 'VT323', monospace;
+            font-size: 32px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #0f0;
+            color: #0f0;
+            text-align: center;
+            width: 300px;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        #nameScreen input:focus {
+            box-shadow: 0 5px 20px rgba(0, 255, 0, 0.3);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0a0;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer" class="screen-flicker">
+        <!-- Boot Sequence -->
+        <div id="bootScreen" class="screen">
+            <div id="bootText"></div>
+            <span class="cursor"></span>
+        </div>
+
+        <!-- Title Screen -->
+        <div id="titleScreen" class="screen hidden">
+            <div class="ascii-title glow">
+                ╔══════════════════════════════════════════════════════════════════╗
+                ║ ║
+                ║ █████╗ ███████╗████████╗███████╗██████╗ ██████╗ ██╗██████╗ ██████╗ ███████╗
+                ║ ██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗██╔═══██╗██║██╔══██╗██╔════╝ ██╔════╝
+                ║ ███████║███████╗ ██║ █████╗ ██████╔╝██║ ██║██║██║ ██║██║ ███╗█████╗
+                ║ ██╔══██║╚════██║ ██║ ██╔══╝ ██╔══██╗██║ ██║██║██║ ██║██║ ██║██╔══╝
+                ║ ██║ ██║███████║ ██║ ███████╗██║ ██║╚██████╔╝██║██████╔╝╚██████╔╝███████╗
+                ║ ╚═╝ ╚═╝╚══════╝ ╚═╝ ╚══════╝╚═╝ ╚═╝ ╚═════╝ ╚═╝╚═════╝ ╚═════╝ ╚══════╝
+                ║ ║
+                ║ ████████████████████ ║
+                ║ █ MSDOS EDITION v1.0 █ ║
+                ║ ████████████████████ ║
+                ╚══════════════════════════════════════════════════════════════════╝
+            </div>
+            <div class="menu">
+                <div class="menu-item selected" data-action="start">► INICIAR JOGO</div>
+                <div class="menu-item" data-action="top10">► TOP 10</div>
+                <div class="menu-item" data-action="instructions">► INSTRUÇÕES</div>
+                <div class="menu-item" data-action="hub">► VOLTAR AO HUB</div>
+            </div>
+            <div style="margin-top: 40px; font-size: 14px; color: #0a0;">
+                Use ↑↓ para navegar • ENTER para selecionar
+            </div>
+        </div>
+
+        <!-- Instructions Screen -->
+        <div id="instructionsScreen" class="screen hidden">
+            <div class="glow" style="font-size: 32px; margin-bottom: 30px;">INSTRUÇÕES</div>
+            <div class="instructions-text">
+                <p><span class="glow">CONTROLES:</span></p>
+                <p>← → Rotacionar nave</p>
+                <p>↑ Acelerar (thrust)</p>
+                <p>ESPAÇO Atirar</p>
+                <p>P Pausar</p>
+                <br>
+                <p><span class="glow">OBJETIVO:</span> Destrua asteroides e acumule pontos!</p>
+                <p>Asteroides grandes = 20pts • Médios = 50pts • Pequenos = 100pts</p>
+                <p>Vida extra a cada 10.000 pontos</p>
+            </div>
+            <button class="btn" onclick="showScreen('titleScreen')" style="margin-top: 30px;">VOLTAR</button>
+        </div>
+
+        <!-- Name Entry Screen -->
+        <div id="nameScreen" class="screen hidden">
+            <div class="prompt glow">DIGITE SEU NOME:</div>
+            <input type="text" id="playerName" maxlength="12" autocomplete="off" placeholder="__________">
+            <button class="btn" onclick="startGame()" style="margin-top: 30px;">JOGAR</button>
+            <button class="btn" onclick="showScreen('titleScreen')"
+                style="border-color: #0a0; color: #0a0;">VOLTAR</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="screen hidden" style="padding: 0;">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div class="hud">
+                <div class="hud-section">
+                    <div class="hud-item">
+                        <div class="hud-label">PONTOS</div>
+                        <div class="hud-value" id="scoreDisplay">0</div>
+                    </div>
+                    <div class="hud-item">
+                        <div class="hud-label">VIDAS</div>
+                        <div class="hud-value" id="livesDisplay">3</div>
+                    </div>
+                </div>
+                <div class="hud-section">
+                    <div class="hud-item">
+                        <div class="hud-label">NÍVEL</div>
+                        <div class="hud-value" id="levelDisplay">1</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden">
+            <div class="result-title glow-red" id="resultTitle">GAME OVER</div>
+            <div class="score-display glow" id="finalScore">0</div>
+            <div class="top-panel">
+                <div style="text-align: center; border-bottom: 1px solid #0a0; padding-bottom: 10px; margin-bottom: 10px;"
+                    class="glow">
+                    ★ TOP 10 PILOTOS ★
+                </div>
+                <div id="top10List">
+                    <div style="text-align:center;color:#0a0;padding:20px;">CARREGANDO...</div>
+                </div>
+            </div>
+            <div>
+                <button class="btn" onclick="location.reload()">MENU PRINCIPAL</button>
+            </div>
+        </div>
+
+        <!-- Top 10 Screen -->
+        <div id="top10Screen" class="screen hidden">
+            <div class="glow" style="font-size: 36px; margin-bottom: 20px;">TOP 10 PILOTOS</div>
+            <div class="top-panel" style="max-height: 350px;">
+                <div id="top10ListStandalone">
+                    <div style="text-align:center;color:#0a0;padding:20px;">CARREGANDO...</div>
+                </div>
+            </div>
+            <button class="btn" onclick="showScreen('titleScreen')">VOLTAR</button>
+        </div>
+    </div>
+
+    <div class="footer">ASTEROIDS v1.0 ∙ MSDOS EDITION</div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // ASTEROIDS - Classic Arcade Game with MSDOS Aesthetic
+        // ═══════════════════════════════════════════════════════════════════
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        let gameState = {
+            playerName: '',
+            score: 0,
+            lives: 3,
+            level: 1,
+            isRunning: false,
+            isPaused: false,
+            isGameOver: false
+        };
+
+        // Input handling
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'KeyP' && gameState.isRunning) {
+                togglePause();
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // Audio context
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            switch (type) {
+                case 'shoot':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'explosion':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                    break;
+                case 'thrust':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.1);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'beep':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1000, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                    break;
+            }
+        }
+
+        // Boot sequence
+        const bootText = [
+            'BIOS DATE 01/15/86 14:22:55 VER 1.02',
+            'CPU: NEC V20, Speed: 8 MHz',
+            '640K RAM SYSTEM... OK',
+            '',
+            'C:\\>CD GAMES',
+            'C:\\GAMES>DIR',
+            '',
+            ' VOLUME IN DRIVE C IS MS-DOS_6',
+            ' DIRECTORY OF C:\\GAMES',
+            '',
+            'ASTEROIDS EXE    52,340  06-17-86  4:38p',
+            'CONFIG   SYS        128  01-15-86  9:00a',
+            '         2 file(s)     52,468 bytes',
+            '',
+            'C:\\GAMES>ASTEROIDS.EXE',
+            '',
+            'Loading Asteroids...',
+            'Initializing graphics... OK',
+            'Loading sprites... OK',
+            'Initializing sound... PC SPEAKER READY',
+            '',
+            '╔═══════════════════════════════════════════════════════════════╗',
+            '║              ASTEROIDS v1.0 - MSDOS EDITION                   ║',
+            '║             (C) 1986 Retro Games Software Inc.                ║',
+            '╚═══════════════════════════════════════════════════════════════╝',
+            '',
+            'Press any key to continue...'
+        ];
+
+        let bootComplete = false;
+
+        function typeBootSequence() {
+            const container = document.getElementById('bootText');
+            container.innerHTML = '';
+            let lineIndex = 0;
+
+            function typeLine() {
+                if (lineIndex >= bootText.length) {
+                    bootComplete = true;
+                    return;
+                }
+                const line = document.createElement('div');
+                line.className = 'boot-line';
+                line.style.animationDelay = `${lineIndex * 0.05}s`;
+                line.textContent = bootText[lineIndex];
+                container.appendChild(line);
+                playSound('beep');
+                lineIndex++;
+                setTimeout(typeLine, 50);
+            }
+            typeLine();
+        }
+
+        // Menu navigation
+        let selectedMenuItem = 0;
+        const menuItems = document.querySelectorAll('.menu-item');
+
+        function updateMenuSelection() {
+            menuItems.forEach((item, index) => {
+                item.classList.toggle('selected', index === selectedMenuItem);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('titleScreen').classList.contains('hidden')) {
+                if (e.key === 'ArrowDown') {
+                    selectedMenuItem = (selectedMenuItem + 1) % menuItems.length;
+                    updateMenuSelection();
+                    playSound('beep');
+                } else if (e.key === 'ArrowUp') {
+                    selectedMenuItem = (selectedMenuItem - 1 + menuItems.length) % menuItems.length;
+                    updateMenuSelection();
+                    playSound('beep');
+                } else if (e.key === 'Enter') {
+                    const action = menuItems[selectedMenuItem].dataset.action;
+                    handleMenuAction(action);
+                }
+            }
+        });
+
+        function handleMenuAction(action) {
+            playSound('beep');
+            switch (action) {
+                case 'start':
+                    showScreen('nameScreen');
+                    document.getElementById('playerName').focus();
+                    break;
+                case 'top10':
+                    showTop10();
+                    break;
+                case 'instructions':
+                    showScreen('instructionsScreen');
+                    break;
+                case 'hub':
+                    window.location.href = '/';
+                    break;
+            }
+        }
+
+        menuItems.forEach((item, index) => {
+            item.addEventListener('click', () => {
+                selectedMenuItem = index;
+                updateMenuSelection();
+                handleMenuAction(item.dataset.action);
+            });
+            item.addEventListener('mouseenter', () => {
+                selectedMenuItem = index;
+                updateMenuSelection();
+            });
+        });
+
+        // Screen management
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+            if (screenId === 'gameScreen') {
+                canvas.classList.add('active');
+            } else {
+                canvas.classList.remove('active');
+            }
+        }
+
+        // Boot proceed
+        function proceedFromBoot() {
+            if (!document.getElementById('bootScreen').classList.contains('hidden') && bootComplete) {
+                showScreen('titleScreen');
+                document.removeEventListener('keydown', skipBoot);
+                document.getElementById('bootScreen').removeEventListener('click', proceedFromBoot);
+            }
+        }
+
+        function skipBoot(e) {
+            proceedFromBoot();
+        }
+
+        document.addEventListener('keydown', skipBoot);
+        document.getElementById('bootScreen').addEventListener('click', proceedFromBoot);
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GAME ENTITIES
+        // ═══════════════════════════════════════════════════════════════════
+
+        class Ship {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.angle = -Math.PI / 2;
+                this.velocity = { x: 0, y: 0 };
+                this.radius = 10;
+                this.thrusting = false;
+                this.invulnerable = 0;
+            }
+
+            update() {
+                // Rotation
+                if (keys['ArrowLeft']) this.angle -= 0.1;
+                if (keys['ArrowRight']) this.angle += 0.1;
+
+                // Thrust
+                this.thrusting = keys['ArrowUp'];
+                if (this.thrusting) {
+                    this.velocity.x += Math.cos(this.angle) * 0.15;
+                    this.velocity.y += Math.sin(this.angle) * 0.15;
+                    playSound('thrust');
+                }
+
+                // Apply velocity
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                // Friction
+                this.velocity.x *= 0.99;
+                this.velocity.y *= 0.99;
+
+                // Screen wrap
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+
+                // Invulnerability countdown
+                if (this.invulnerable > 0) this.invulnerable--;
+            }
+
+            draw() {
+                if (this.invulnerable > 0 && Math.floor(Date.now() / 100) % 2 === 0) return;
+
+                ctx.strokeStyle = '#0f0';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const noseX = this.x + Math.cos(this.angle) * this.radius * 2;
+                const noseY = this.y + Math.sin(this.angle) * this.radius * 2;
+                const leftX = this.x + Math.cos(this.angle + 2.5) * this.radius;
+                const leftY = this.y + Math.sin(this.angle + 2.5) * this.radius;
+                const rightX = this.x + Math.cos(this.angle - 2.5) * this.radius;
+                const rightY = this.y + Math.sin(this.angle - 2.5) * this.radius;
+
+                ctx.moveTo(noseX, noseY);
+                ctx.lineTo(leftX, leftY);
+                ctx.lineTo(rightX, rightY);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Thrust flame
+                if (this.thrusting) {
+                    ctx.strokeStyle = '#ffb000';
+                    ctx.beginPath();
+                    const flameX = this.x + Math.cos(this.angle + Math.PI) * this.radius * 1.5;
+                    const flameY = this.y + Math.sin(this.angle + Math.PI) * this.radius * 1.5;
+                    ctx.moveTo(leftX, leftY);
+                    ctx.lineTo(flameX, flameY);
+                    ctx.lineTo(rightX, rightY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        class Asteroid {
+            constructor(x, y, size) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || Math.random() * canvas.height;
+                this.size = size || 3; // 3=large, 2=medium, 1=small
+                this.radius = size * 15 || 45;
+                this.angle = Math.random() * Math.PI * 2;
+                this.velocity = {
+                    x: Math.cos(this.angle) * (0.5 + Math.random() * 1.5),
+                    y: Math.sin(this.angle) * (0.5 + Math.random() * 1.5)
+                };
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+
+                // Generate irregular shape
+                this.vertices = [];
+                const numVertices = 8 + Math.floor(Math.random() * 6);
+                for (let i = 0; i < numVertices; i++) {
+                    const angle = (i / numVertices) * Math.PI * 2;
+                    const variance = 0.7 + Math.random() * 0.6;
+                    this.vertices.push({
+                        x: Math.cos(angle) * this.radius * variance,
+                        y: Math.sin(angle) * this.radius * variance
+                    });
+                }
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.rotation += this.rotationSpeed;
+
+                // Screen wrap
+                if (this.x < -this.radius) this.x = canvas.width + this.radius;
+                if (this.x > canvas.width + this.radius) this.x = -this.radius;
+                if (this.y < -this.radius) this.y = canvas.height + this.radius;
+                if (this.y > canvas.height + this.radius) this.y = -this.radius;
+            }
+
+            draw() {
+                ctx.strokeStyle = '#0f0';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < this.vertices.length; i++) {
+                    const v = this.vertices[i];
+                    const x = this.x + v.x * Math.cos(this.rotation) - v.y * Math.sin(this.rotation);
+                    const y = this.y + v.x * Math.sin(this.rotation) + v.y * Math.cos(this.rotation);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: Math.cos(angle) * 8,
+                    y: Math.sin(angle) * 8
+                };
+                this.life = 60;
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.life--;
+
+                // Screen wrap
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = '#0f0';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 4,
+                    y: (Math.random() - 0.5) * 4
+                };
+                this.life = 30;
+            }
+
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.life--;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(0, 255, 0, ${this.life / 30})`;
+                ctx.fillRect(this.x, this.y, 2, 2);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GAME LOGIC
+        // ═══════════════════════════════════════════════════════════════════
+
+        let ship;
+        let asteroids = [];
+        let bullets = [];
+        let particles = [];
+        let lastShot = 0;
+
+        function initGame() {
+            ship = new Ship();
+            asteroids = [];
+            bullets = [];
+            particles = [];
+            spawnAsteroids();
+        }
+
+        function spawnAsteroids() {
+            const count = 2 + gameState.level;
+            for (let i = 0; i < count; i++) {
+                let x, y;
+                do {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() * canvas.height;
+                } while (Math.hypot(x - ship.x, y - ship.y) < 150);
+                asteroids.push(new Asteroid(x, y, 3));
+            }
+        }
+
+        function checkCollisions() {
+            // Bullets vs Asteroids
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    const dist = Math.hypot(bullets[i].x - asteroids[j].x, bullets[i].y - asteroids[j].y);
+                    if (dist < asteroids[j].radius) {
+                        // Destroy asteroid
+                        const asteroid = asteroids[j];
+                        asteroids.splice(j, 1);
+                        bullets.splice(i, 1);
+
+                        // Add score
+                        const points = asteroid.size === 3 ? 20 : asteroid.size === 2 ? 50 : 100;
+                        gameState.score += points;
+
+                        // Create particles
+                        for (let k = 0; k < 10; k++) {
+                            particles.push(new Particle(asteroid.x, asteroid.y));
+                        }
+                        playSound('explosion');
+
+                        // Split asteroid
+                        if (asteroid.size > 1) {
+                            for (let k = 0; k < 2; k++) {
+                                const newAsteroid = new Asteroid(asteroid.x, asteroid.y, asteroid.size - 1);
+                                asteroids.push(newAsteroid);
+                            }
+                        }
+
+                        updateHUD();
+                        break;
+                    }
+                }
+            }
+
+            // Ship vs Asteroids
+            if (ship.invulnerable === 0) {
+                for (let i = asteroids.length - 1; i >= 0; i--) {
+                    const dist = Math.hypot(ship.x - asteroids[i].x, ship.y - asteroids[i].y);
+                    if (dist < ship.radius + asteroids[i].radius) {
+                        // Ship hit
+                        gameState.lives--;
+                        updateHUD();
+
+                        // Create particles
+                        for (let k = 0; k < 20; k++) {
+                            particles.push(new Particle(ship.x, ship.y));
+                        }
+                        playSound('explosion');
+
+                        if (gameState.lives <= 0) {
+                            gameOver();
+                        } else {
+                            // Respawn ship
+                            ship.x = canvas.width / 2;
+                            ship.y = canvas.height / 2;
+                            ship.velocity = { x: 0, y: 0 };
+                            ship.invulnerable = 180; // 3 seconds at 60fps
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+            document.getElementById('livesDisplay').textContent = gameState.lives;
+            document.getElementById('levelDisplay').textContent = gameState.level;
+        }
+
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+        }
+
+        function gameLoop() {
+            if (!gameState.isRunning || gameState.isPaused) {
+                if (gameState.isRunning) requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // Clear screen with trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Update ship
+            ship.update();
+            ship.draw();
+
+            // Shoot
+            if (keys['Space'] && Date.now() - lastShot > 250) {
+                bullets.push(new Bullet(
+                    ship.x + Math.cos(ship.angle) * 20,
+                    ship.y + Math.sin(ship.angle) * 20,
+                    ship.angle
+                ));
+                lastShot = Date.now();
+                playSound('shoot');
+            }
+
+            // Update bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].update();
+                bullets[i].draw();
+                if (bullets[i].life <= 0) bullets.splice(i, 1);
+            }
+
+            // Update asteroids
+            for (let asteroid of asteroids) {
+                asteroid.update();
+                asteroid.draw();
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            // Check collisions
+            checkCollisions();
+
+            // Check level complete
+            if (asteroids.length === 0) {
+                gameState.level++;
+                spawnAsteroids();
+                updateHUD();
+            }
+
+            // Check extra life
+            if (gameState.score > 0 && gameState.score % 10000 < 100 && gameState.score % 10000 >= 0) {
+                // This is a simplified check - in a real implementation you'd track when bonus was given
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            const name = document.getElementById('playerName').value.trim().toUpperCase();
+            if (!name) {
+                document.getElementById('playerName').style.borderColor = '#f00';
+                return;
+            }
+
+            gameState.playerName = name.slice(0, 12);
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.isRunning = true;
+            gameState.isPaused = false;
+            gameState.isGameOver = false;
+
+            initGame();
+            updateHUD();
+            showScreen('gameScreen');
+            gameLoop();
+        }
+
+        function gameOver() {
+            gameState.isRunning = false;
+            gameState.isGameOver = true;
+            document.getElementById('finalScore').textContent = gameState.score;
+            submitScore();
+            showScreen('gameOverScreen');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // SCORE API
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function submitScore() {
+            try {
+                await fetch('/api/scores/asteroids', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: gameState.playerName,
+                        score: gameState.score
+                    })
+                });
+            } catch (e) {
+                console.error('Failed to submit score:', e);
+            }
+            await updateTop10List('top10List');
+        }
+
+        async function fetchTopScores() {
+            try {
+                const res = await fetch('/api/scores/asteroids');
+                return await res.json();
+            } catch (e) {
+                console.error('Failed to fetch scores:', e);
+                return [];
+            }
+        }
+
+        async function updateTop10List(elementId) {
+            const top = await fetchTopScores();
+            const container = document.getElementById(elementId);
+
+            if (!top || !top.length) {
+                container.innerHTML = '<div style="text-align:center;color:#0a0;padding:20px;">SEM RECORDES AINDA</div>';
+                return;
+            }
+
+            let html = '';
+            top.forEach((s, i) => {
+                const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                const icon = i === 0 ? '★' : i === 1 ? '◆' : i === 2 ? '●' : `${i + 1}.`;
+                html += `
+          <div class="top-row ${cls}">
+            <div style="text-align:center;">${icon}</div>
+            <div>${s.name}</div>
+            <div style="text-align:right;">${s.score}</div>
+          </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function showTop10() {
+            await updateTop10List('top10ListStandalone');
+            showScreen('top10Screen');
+        }
+
+        // Start
+        typeBootSequence();
+    </script>
+</body>
+
+</html>

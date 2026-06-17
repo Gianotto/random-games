@@ -54,5 +54,20 @@
       "classic",
       "retro"
     ]
+  },
+  {
+    "id": "asteroids",
+    "name": "Asteroids",
+    "subtitle": "MSDOS EDITION",
+    "description": "Destrua asteroides e sobreviva no espaço infinito. Clássico arcade com visual retrô de DOS.",
+    "path": "/games/asteroids/",
+    "color": "#00ffff",
+    "added": "2026-06-17",
+    "tags": [
+      "arcade",
+      "classic",
+      "shooter",
+      "retro"
+    ]
   }
 ]
