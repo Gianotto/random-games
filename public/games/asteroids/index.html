@@ -600,6 +600,8 @@
         // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
 
         // Game Entities
         let ship = null;
@@ -1143,7 +1145,7 @@
                     handleMenuAction();
                     e.preventDefault();
                 }
-            } else if (gameState.screen === 'instructions' || gameState.screen === 'topscores') {
+            } else if (gameState.screen === 'instructions' || gameState.screen === 'topScores') {
                 if (e.code === 'Escape') {
                     showScreen('title');
                     e.preventDefault();
