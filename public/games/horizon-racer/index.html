@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizon Racer — ENDURO x OUTRUN</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Orbitron', 'Arial Black', sans-serif;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Game Container - Arcade Monitor Style */
+        #gameContainer {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            background: #000;
+            border: 20px solid #1a1a1a;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 5px #333,
+                0 0 100px rgba(255, 100, 50, 0.3),
+                inset 0 0 100px rgba(0, 0, 0, 0.8);
+        }
+
+        /* CRT Scanlines */
+        #gameContainer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    rgba(0, 0, 0, 0.15),
+                    rgba(0, 0, 0, 0.15) 2px,
+                    transparent 2px,
+                    transparent 4px);
+            pointer-events: none;
+            z-index: 100;
+            animation: scanline 8s linear infinite;
+        }
+
+        /* Screen Glow */
+        #gameContainer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center,
+                    transparent 50%,
+                    rgba(0, 0, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 101;
+        }
+
+        @keyframes scanline {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(4px);
+            }
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #1a0a30 0%, #0a0a1a 50%, #000 100%);
+            z-index: 1;
+        }
+
+        .screen.hidden {
+            display: none !important;
+        }
+
+        #gameCanvas.hidden {
+            display: none !important;
+        }
+
+        /* Anything tagged .hidden is fully hidden (HUD, pause tag, etc.) */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Boot Screen */
+        #bootScreen {
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #0ff;
+        }
+
+        .boot-line {
+            opacity: 0;
+            animation: fadeIn 0.1s forwards;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Title Screen */
+        #titleScreen {
+            background: linear-gradient(180deg,
+                    #ff6b35 0%,
+                    #ff006e 30%,
+                    #8338ec 60%,
+                    #1a0a30 100%);
+        }
+
+        .sunset-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 50% 100%, #ff6b35 0%, transparent 60%),
+                radial-gradient(ellipse at 30% 80%, #ff006e 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 70%, #8338ec 0%, transparent 50%);
+            opacity: 0.6;
+        }
+
+        #titleScreen .game-title {
+            position: relative;
+            font-size: 72px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow:
+                0 0 20px rgba(255, 100, 50, 0.8),
+                0 0 40px rgba(255, 0, 110, 0.5),
+                0 0 80px rgba(255, 100, 50, 0.3);
+            margin-bottom: 20px;
+            z-index: 10;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        #titleScreen .game-subtitle {
+            position: relative;
+            font-size: 18px;
+            color: #ffbe0b;
+            margin-bottom: 60px;
+            letter-spacing: 12px;
+            z-index: 10;
+            text-shadow: 0 0 20px rgba(255, 190, 11, 0.5);
+        }
+
+        /* Menu */
+        .menu {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .menu-item {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 15px 50px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            background: rgba(0, 0, 0, 0.6);
+            color: #888;
+            transition: all 0.2s;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 100%, 15px 100%);
+        }
+
+        .menu-item:hover,
+        .menu-item.selected {
+            color: #fff;
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.2);
+            box-shadow:
+                0 0 30px rgba(255, 107, 53, 0.5),
+                inset 0 0 20px rgba(255, 107, 53, 0.1);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        .menu-item.selected::before {
+            content: '▶';
+            margin-right: 15px;
+            color: #ff006e;
+        }
+
+        .menu-hint {
+            position: relative;
+            margin-top: 40px;
+            color: #ffbe0b;
+            font-size: 13px;
+            letter-spacing: 3px;
+            z-index: 10;
+            opacity: 0.8;
+            animation: blink 1.4s step-end infinite;
+        }
+
+        /* Game Canvas */
+        #gameCanvas {
+            position: absolute;
+            inset: 0;
+            background: #000;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .hud-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hud-label {
+            font-size: 12px;
+            color: #ffbe0b;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(255, 190, 11, 0.5);
+        }
+
+        .hud-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .speedometer {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border: 4px solid #ff6b35;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .speed-value {
+            font-size: 42px;
+            font-weight: 900;
+            color: #ff6b35;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.8);
+        }
+
+        .speed-unit {
+            font-size: 10px;
+            color: #666;
+            letter-spacing: 2px;
+        }
+
+        /* Day/Night Indicator */
+        #timeIndicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #timeIndicator.day {
+            border-color: #ffbe0b;
+            color: #ffbe0b;
+        }
+
+        #timeIndicator.night {
+            border-color: #3a86ff;
+            color: #3a86ff;
+        }
+
+        /* Pause overlay */
+        #pauseTag {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 56px;
+            font-weight: 900;
+            color: #ff6b35;
+            letter-spacing: 8px;
+            text-shadow: 0 0 30px rgba(255, 107, 53, 0.8);
+            z-index: 60;
+            pointer-events: none;
+            animation: blink 1s step-end infinite;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            background: rgba(0, 0, 0, 0.95);
+        }
+
+        #gameOverScreen .game-over-text {
+            font-size: 64px;
+            font-weight: 900;
+            color: #ff006e;
+            text-shadow: 0 0 40px rgba(255, 0, 110, 0.8);
+            margin-bottom: 30px;
+            animation: gameOverPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes gameOverPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(0.98);
+            }
+        }
+
+        .final-stats {
+            display: flex;
+            gap: 60px;
+            margin-bottom: 40px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: #00f5d4;
+            text-shadow: 0 0 20px rgba(0, 245, 212, 0.5);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
+
+        .prompt-text {
+            font-size: 16px;
+            color: #ff6b35;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Instructions */
+        #instructionsScreen {
+            background: linear-gradient(180deg, #1a0a30 0%, #000 100%);
+        }
+
+        #instructionsScreen h2 {
+            font-size: 42px;
+            color: #ff6b35;
+            margin-bottom: 40px;
+            text-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+        }
+
+        .instructions-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .instruction-card {
+            background: rgba(255, 107, 53, 0.1);
+            border: 2px solid #ff6b35;
+            padding: 20px 30px;
+            border-radius: 10px;
+        }
+
+        .instruction-title {
+            font-size: 14px;
+            color: #ffbe0b;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .instruction-text {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.8;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 10px;
+            border-radius: 5px;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .back-hint {
+            color: #666;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer">
+        <!-- Boot Screen -->
+        <div id="bootScreen" class="screen">
+            <div id="bootText"></div>
+        </div>
+
+        <!-- Title Screen -->
+        <div id="titleScreen" class="screen hidden">
+            <div class="sunset-bg"></div>
+            <div class="game-title">HORIZON RACER</div>
+            <div class="game-subtitle">ENDURO × OUTRUN</div>
+            <div class="menu">
+                <div class="menu-item selected" data-action="start">Cruzar o Deserto</div>
+                <div class="menu-item" data-action="instructions">Como Jogar</div>
+            </div>
+            <div class="menu-hint">↑ ↓ navegar &nbsp;•&nbsp; ENTER selecionar</div>
+        </div>
+
+        <!-- Instructions Screen -->
+        <div id="instructionsScreen" class="screen hidden">
+            <h2>CONTROLES</h2>
+            <div class="instructions-content">
+                <div class="instruction-card">
+                    <div class="instruction-title">Direção</div>
+                    <div class="instruction-text">
+                        <span class="key">←</span> <span class="key">→</span> Mudar de faixa<br>
+                        <span class="key">↑</span> Acelerar<br>
+                        <span class="key">↓</span> Frear
+                    </div>
+                </div>
+                <div class="instruction-card">
+                    <div class="instruction-title">Objetivo</div>
+                    <div class="instruction-text">
+                        Ultrapasse o tráfego nas 6 faixas.<br>
+                        Acumule o máximo de quilômetros.<br>
+                        Sobreviva ao ciclo dia/noite.
+                    </div>
+                </div>
+                <div class="instruction-card">
+                    <div class="instruction-title">Dicas</div>
+                    <div class="instruction-text">
+                        À noite a visibilidade diminui.<br>
+                        Saia da pista e você perde velocidade.<br>
+                        Mantenha velocidade alta para mais pontos.
+                    </div>
+                </div>
+                <div class="instruction-card">
+                    <div class="instruction-title">Velocidade</div>
+                    <div class="instruction-text">
+                        Velocidade afeta a pontuação.<br>
+                        Ultrapassagens = bônus.<br>
+                        Batidas = perda de velocidade.
+                    </div>
+                </div>
+            </div>
+            <div class="back-hint">Pressione ESC para voltar</div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="hidden"></canvas>
+
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="hud-section">
+                <div class="hud-label">Score</div>
+                <div class="hud-value" id="scoreValue">0</div>
+                <div class="hud-label" style="margin-top: 15px;">Distance</div>
+                <div class="hud-value" id="distValue">0<small>km</small></div>
+            </div>
+            <div id="timeIndicator" class="day">
+                <span id="timeIcon">☀</span>
+                <span id="timeText">DAY</span>
+            </div>
+            <div class="hud-section" style="align-items: flex-end;">
+                <div class="speedometer">
+                    <div class="speed-value" id="speedValue">0</div>
+                    <div class="speed-unit">MPH</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause tag -->
+        <div id="pauseTag" class="hidden">PAUSA</div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden">
+            <div class="game-over-text">FIM DE JOGO</div>
+            <div class="final-stats">
+                <div class="stat">
+                    <div class="stat-value" id="finalScore">0</div>
+                    <div class="stat-label">Pontos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="finalDist">0</div>
+                    <div class="stat-label">Km</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="finalCars">0</div>
+                    <div class="stat-label">Overtakes</div>
+                </div>
+            </div>
+            <div class="prompt-text">Pressione ESPAÇO para continuar</div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Canvas =====
+        const WIDTH = 900;
+        const HEIGHT = 700;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        // ===== Pseudo-3D constants =====
+        const SEGMENT_LENGTH = 200;    // world units per road segment
+        const RUMBLE_LENGTH = 3;       // segments per rumble/light-dark band
+        const ROAD_WIDTH = 2400;       // half-width of the road in world units (wide: 6 lanes)
+        const LANES = 6;               // 4 original + 2 extra
+        const CAMERA_HEIGHT = 1200;    // camera height above the road
+        const FIELD_OF_VIEW = 100;     // degrees
+        const CAMERA_DEPTH = 1 / Math.tan((FIELD_OF_VIEW / 2) * Math.PI / 180);
+        const PLAYER_Z = CAMERA_HEIGHT * CAMERA_DEPTH; // distance camera -> player
+        const DRAW_DISTANCE = 320;     // segments drawn ahead -> reaches the horizon line
+        const CENTRIFUGAL = 0.28;      // how hard curves push the car
+
+        // ===== Speed / physics (slower car, slower acceleration) =====
+        const MAX_SPEED = 8000;                  // world units / second (top speed)
+        const ACCEL = MAX_SPEED / 9;             // ~9s to reach top speed (slow accel)
+        const DECEL = -MAX_SPEED / 8;            // natural coast-down
+        const BRAKE = -MAX_SPEED / 3;            // braking
+        const OFFROAD_DECEL = -MAX_SPEED / 4;    // drag when off the road
+        const OFFROAD_LIMIT = MAX_SPEED / 3;     // max speed while off-road
+        const STEER = 1.8;                       // steering responsiveness
+        const MAX_MPH = 200;                     // speedometer scale
+
+        // ===== Day/Night (shorter cycle) =====
+        const DAY_CYCLE = 45; // seconds for a full day -> night loop
+
+        // ===== Game State =====
+        let gameState = {
+            screen: 'boot',
+            running: false,
+            paused: false,
+            selectedMenu: 0,
+            score: 0,
+            totalDistance: 0,   // monotonic, never resets while playing
+            distanceKm: 0,
+            speed: 0,
+            overtakes: 0,
+            dayTime: 0          // 0..1 : 0 = noon, 0.5 = sunset, 1 = night
+        };
+
+        // ===== Player =====
+        let player = { x: 0 };   // x: -1 (left edge) .. 1 (right edge)
+        let position = 0;        // camera position along the track (wrapped 0..trackLength)
+        let mountainShift = 0;   // accumulated horizontal parallax offset
+
+        // ===== World =====
+        let segments = [];
+        let trackLength = 0;
+        let cars = [];
+        let particles = [];
+        let frameCount = 0;
+
+        // ===== Palettes =====
+        const ROAD_COLORS = {
+            day: {
+                sky: ['#3a86d9', '#9bd5f0'], sun: '#fff7d0', moon: false,
+                mtnFar: '#6a86b0', mtnNear: '#46668a',
+                LIGHT: { road: '#6b6b6b', grass: '#3f9a45', rumble: '#ffffff', lane: '#ffffff' },
+                DARK: { road: '#666666', grass: '#369040', rumble: '#bbbbbb', lane: false }
+            },
+            sunset: {
+                sky: ['#ff6b35', '#ffbe0b'], sun: '#fff0a0', moon: false,
+                mtnFar: '#8a3b6e', mtnNear: '#4a2347',
+                LIGHT: { road: '#4a3b4a', grass: '#7a5c2e', rumble: '#ff006e', lane: '#ffbe0b' },
+                DARK: { road: '#453745', grass: '#6e521f', rumble: '#ffffff', lane: false }
+            },
+            night: {
+                sky: ['#0a0a1a', '#1a0a30'], sun: '#ffffff', moon: true,
+                mtnFar: '#1c1c3c', mtnNear: '#101026',
+                LIGHT: { road: '#2a2a3a', grass: '#13301a', rumble: '#cc0000', lane: '#777777' },
+                DARK: { road: '#262635', grass: '#0e260f', rumble: '#eeeeee', lane: false }
+            }
+        };
+
+        function getPalette() {
+            const t = gameState.dayTime;
+            if (t < 0.3) return ROAD_COLORS.day;
+            if (t < 0.7) return ROAD_COLORS.sunset;
+            return ROAD_COLORS.night;
+        }
+
+        function isNight() { return gameState.dayTime >= 0.7; }
+
+        // ===== Utils =====
+        function interpolate(a, b, p) { return a + (b - a) * p; }
+        function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+        function increase(start, inc, max) {
+            let r = start + inc;
+            while (r >= max) r -= max;
+            while (r < 0) r += max;
+            return r;
+        }
+
+        function findSegment(z) {
+            return segments[Math.floor(z / SEGMENT_LENGTH) % segments.length];
+        }
+
+        function forwardDist(z) {
+            let d = z - position;
+            while (d < 0) d += trackLength;
+            while (d >= trackLength) d -= trackLength;
+            return d;
+        }
+
+        function darken(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max((num >> 16) - amt, 0);
+            const G = Math.max((num >> 8 & 0x00FF) - amt, 0);
+            const B = Math.max((num & 0x0000FF) - amt, 0);
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        function laneCenter(laneIndex) {
+            // returns offset in -1..1 for the center of a given lane
+            return -1 + (laneIndex + 0.5) * (2 / LANES);
+        }
+
+        // ===== Road building =====
+        function hillAt(i) {
+            return Math.sin(i / 35) * 1500 + Math.sin(i / 110) * 2600;
+        }
+        function curveAt(i) {
+            return Math.sin(i / 45) * 2.4 + Math.sin(i / 13) * 0.8;
+        }
+
+        function buildRoad() {
+            segments = [];
+            const N = 1600;
+            for (let i = 0; i < N; i++) {
+                segments.push({
+                    index: i,
+                    curve: curveAt(i),
+                    color: Math.floor(i / RUMBLE_LENGTH) % 2 ? 'DARK' : 'LIGHT',
+                    frame: -1,
+                    p1: { world: { y: hillAt(i), z: i * SEGMENT_LENGTH }, camera: {}, screen: {} },
+                    p2: { world: { y: hillAt(i + 1), z: (i + 1) * SEGMENT_LENGTH }, camera: {}, screen: {} }
+                });
+            }
+            trackLength = segments.length * SEGMENT_LENGTH;
+        }
+
+        // ===== Projection =====
+        function project(p, cameraX, cameraY, cameraZ) {
+            p.camera.x = (p.world.x || 0) - cameraX;
+            p.camera.y = (p.world.y || 0) - cameraY;
+            p.camera.z = (p.world.z || 0) - cameraZ;
+            p.screen.scale = CAMERA_DEPTH / p.camera.z;
+            p.screen.x = Math.round(WIDTH / 2 + p.screen.scale * p.camera.x * WIDTH / 2);
+            p.screen.y = Math.round(HEIGHT / 2 - p.screen.scale * p.camera.y * HEIGHT / 2);
+            p.screen.w = Math.round(p.screen.scale * ROAD_WIDTH * WIDTH / 2);
+        }
+
+        function polygon(x1, y1, x2, y2, x3, y3, x4, y4, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x3, y3);
+            ctx.lineTo(x4, y4);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Rounded-rect path (with fallback for older canvas implementations)
+        function rr(x, y, ww, hh, r) {
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(x, y, ww, hh, r);
+            } else {
+                ctx.moveTo(x + r, y);
+                ctx.arcTo(x + ww, y, x + ww, y + hh, r);
+                ctx.arcTo(x + ww, y + hh, x, y + hh, r);
+                ctx.arcTo(x, y + hh, x, y, r);
+                ctx.arcTo(x, y, x + ww, y, r);
+            }
+            ctx.closePath();
+        }
+
+        // ===== Background (sky, sun/moon, parallax mountains) =====
+        function drawSky(palette) {
+            const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+            grad.addColorStop(0, palette.sky[0]);
+            grad.addColorStop(1, palette.sky[1]);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        }
+
+        function drawCelestial(palette) {
+            const horizon = HEIGHT / 2;
+            const sunY = horizon - Math.sin(gameState.dayTime * Math.PI) * 230 + 40;
+            const sunX = WIDTH / 2 + Math.cos(gameState.dayTime * Math.PI) * 120;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 70, 0, Math.PI * 2);
+            ctx.fillStyle = palette.moon ? 'rgba(255,255,255,0.15)' : 'rgba(255,180,80,0.25)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 42, 0, Math.PI * 2);
+            ctx.fillStyle = palette.sun;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawRange(baseY, amp, freq, offset, color, seed) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, baseY + 2);
+            for (let sx = 0; sx <= WIDTH; sx += 10) {
+                const wx = sx + offset;
+                const h = amp * (0.45 + 0.55 * Math.abs(Math.sin(wx * freq + seed)))
+                    * (0.6 + 0.4 * Math.sin(wx * freq * 2.7 + seed * 1.7));
+                ctx.lineTo(sx, baseY - h);
+            }
+            ctx.lineTo(WIDTH, baseY + 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawMountains(palette) {
+            const horizon = HEIGHT / 2;
+            // Far range: slow parallax. Near range: faster parallax. Both react to
+            // the road curve (mountainShift) and to the car's lane position (player.x).
+            const farOffset = mountainShift * 0.30 + player.x * 90;
+            const nearOffset = mountainShift * 0.60 + player.x * 190;
+            drawRange(horizon, 95, 0.0040, farOffset, palette.mtnFar, 1.3);
+            drawRange(horizon, 150, 0.0060, nearOffset, palette.mtnNear, 4.1);
+        }
+
+        // ===== Render =====
+        function render() {
+            frameCount++;
+            const palette = getPalette();
+
+            drawSky(palette);
+            drawCelestial(palette);
+            drawMountains(palette);
+
+            // Fill the ground band so there are never gaps under the road.
+            ctx.fillStyle = palette.LIGHT.grass;
+            ctx.fillRect(0, HEIGHT / 2, WIDTH, HEIGHT / 2);
+
+            const baseSegment = findSegment(position);
+            const basePercent = (position % SEGMENT_LENGTH) / SEGMENT_LENGTH;
+            const playerSeg = findSegment(position + PLAYER_Z);
+            const cameraY = CAMERA_HEIGHT + playerSeg.p1.world.y;
+
+            let x = 0;
+            let dx = -(baseSegment.curve * basePercent);
+            let maxy = HEIGHT;
+
+            for (let n = 0; n < DRAW_DISTANCE; n++) {
+                const seg = segments[(baseSegment.index + n) % segments.length];
+                const looped = seg.index < baseSegment.index;
+                const camZ = position - (looped ? trackLength : 0);
+
+                project(seg.p1, (player.x * ROAD_WIDTH) - x, cameraY, camZ);
+                project(seg.p2, (player.x * ROAD_WIDTH) - x - dx, cameraY, camZ);
+                seg.frame = frameCount;
+
+                x += dx;
+                dx += seg.curve;
+
+                if (seg.p1.camera.z <= CAMERA_DEPTH || seg.p2.screen.y >= maxy) continue;
+
+                renderSegment(seg, palette);
+                maxy = seg.p2.screen.y;
+            }
+
+            // Traffic cars (far -> near for correct overlap)
+            const visible = [];
+            for (const car of cars) {
+                const seg = findSegment(car.z);
+                if (seg.frame !== frameCount) continue;
+                const d = forwardDist(car.z);
+                if (d <= 0 || d > (DRAW_DISTANCE - 2) * SEGMENT_LENGTH) continue;
+                visible.push({ car, seg, d });
+            }
+            visible.sort((a, b) => b.d - a.d);
+            for (const v of visible) renderCar(v.car, v.seg);
+
+            drawPlayer(palette);
+            drawParticles();
+
+            // Speed lines at high speed
+            if (gameState.speed > MAX_SPEED * 0.75) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 6; i++) {
+                    const lx = Math.random() * WIDTH;
+                    const ly = Math.random() * HEIGHT / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, ly);
+                    ctx.lineTo(lx, ly + 60);
+                    ctx.stroke();
+                }
+            }
+
+            // Night darkening overlay
+            if (isNight()) {
+                ctx.fillStyle = 'rgba(0,0,25,0.35)';
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            }
+        }
+
+        function renderSegment(seg, palette) {
+            const c = palette[seg.color];
+            const p1 = seg.p1.screen, p2 = seg.p2.screen;
+
+            // grass band
+            ctx.fillStyle = c.grass;
+            ctx.fillRect(0, p2.y, WIDTH, p1.y - p2.y);
+
+            const r1 = p1.w / 6, r2 = p2.w / 6;     // rumble strips
+            // left rumble
+            polygon(p1.x - p1.w - r1, p1.y, p1.x - p1.w, p1.y, p2.x - p2.w, p2.y, p2.x - p2.w - r2, p2.y, c.rumble);
+            // right rumble
+            polygon(p1.x + p1.w + r1, p1.y, p1.x + p1.w, p1.y, p2.x + p2.w, p2.y, p2.x + p2.w + r2, p2.y, c.rumble);
+            // road
+            polygon(p1.x - p1.w, p1.y, p1.x + p1.w, p1.y, p2.x + p2.w, p2.y, p2.x - p2.w, p2.y, c.road);
+
+            // lane markers (only on LIGHT segments -> dashed effect)
+            if (c.lane) {
+                const lw1 = Math.max(p1.w / 60, 0.5), lw2 = Math.max(p2.w / 60, 0.5);
+                const step1 = (p1.w * 2) / LANES, step2 = (p2.w * 2) / LANES;
+                let lx1 = p1.x - p1.w + step1, lx2 = p2.x - p2.w + step2;
+                for (let l = 1; l < LANES; l++) {
+                    polygon(lx1 - lw1, p1.y, lx1 + lw1, p1.y, lx2 + lw2, p2.y, lx2 - lw2, p2.y, c.lane);
+                    lx1 += step1; lx2 += step2;
+                }
+            }
+        }
+
+        // ===== Cars =====
+        const CAR_COLORS = ['#d11', '#16c', '#dc1', '#1c9', '#c1c', '#e80', '#7c3'];
+
+        class Car {
+            constructor(z) {
+                this.z = z;
+                this.lane = Math.floor(Math.random() * LANES);
+                this.offset = laneCenter(this.lane);
+                this.speed = MAX_SPEED * (0.30 + Math.random() * 0.30); // 30-60% of top: easy to pass
+                this.color = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+                this.dist = forwardDist(z);
+                this.hit = false;
+            }
+        }
+
+        function initCars() {
+            cars = [];
+            const COUNT = 26;
+            for (let i = 0; i < COUNT; i++) {
+                const z = (i / COUNT) * trackLength;
+                cars.push(new Car(z));
+            }
+        }
+
+        function renderCar(car, seg) {
+            const perc = (car.z % SEGMENT_LENGTH) / SEGMENT_LENGTH;
+            const sx = interpolate(seg.p1.screen.x, seg.p2.screen.x, perc);
+            const sy = interpolate(seg.p1.screen.y, seg.p2.screen.y, perc);
+            const scale = interpolate(seg.p1.screen.scale, seg.p2.screen.scale, perc);
+
+            const w = scale * (ROAD_WIDTH / LANES) * 0.9 * WIDTH / 2;
+            if (w < 4) return;
+            const h = w * 0.6;
+            const cx = sx + scale * car.offset * ROAD_WIDTH * WIDTH / 2;
+            const baseY = sy;
+            const x = cx - w / 2;
+            const y = baseY - h;
+
+            // shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(cx, baseY, w * 0.55, h * 0.16, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // body
+            ctx.fillStyle = car.color;
+            ctx.fillRect(x, y + h * 0.35, w, h * 0.55);
+            // roof
+            ctx.fillStyle = darken(car.color, 25);
+            ctx.fillRect(x + w * 0.2, y, w * 0.6, h * 0.45);
+            // rear window
+            ctx.fillStyle = isNight() ? 'rgba(40,60,90,0.9)' : 'rgba(150,185,215,0.8)';
+            ctx.fillRect(x + w * 0.27, y + h * 0.07, w * 0.46, h * 0.28);
+            // tail lights
+            const tlW = w * 0.2, tlH = h * 0.18;
+            const tlLx = x + w * 0.04, tlRx = x + w * 0.76, tlY = y + h * 0.52;
+            if (isNight()) {
+                ctx.save();
+                ctx.shadowColor = '#ff0000';
+                ctx.shadowBlur = Math.max(w * 0.7, 8);
+                ctx.fillStyle = '#ff1414';
+                ctx.fillRect(tlLx, tlY, tlW, tlH);
+                ctx.fillRect(tlRx, tlY, tlW, tlH);
+                // double pass so the glow really stacks
+                ctx.fillRect(tlLx, tlY, tlW, tlH);
+                ctx.fillRect(tlRx, tlY, tlW, tlH);
+                ctx.shadowBlur = 0;
+                // hot core
+                ctx.fillStyle = '#ff9a9a';
+                ctx.fillRect(tlLx + tlW * 0.25, tlY + tlH * 0.25, tlW * 0.5, tlH * 0.5);
+                ctx.fillRect(tlRx + tlW * 0.25, tlY + tlH * 0.25, tlW * 0.5, tlH * 0.5);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#cc2424';
+                ctx.fillRect(tlLx, tlY, tlW, tlH);
+                ctx.fillRect(tlRx, tlY, tlW, tlH);
+            }
+            // bumper
+            ctx.fillStyle = darken(car.color, 45);
+            ctx.fillRect(x, y + h * 0.86, w, h * 0.14);
+        }
+
+        // ===== Player car (sleek rear-view sports car) =====
+        function drawPlayer(palette) {
+            const carX = WIDTH / 2 + player.x * 18;     // subtle steering lean
+            const cy = HEIGHT - 150;
+            const w = 84, h = 48;
+            const night = isNight();
+            const left = carX - w / 2;
+            const right = carX + w / 2;
+
+            // Ground shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath();
+            ctx.ellipse(carX, cy + h * 0.52, w * 0.60, h * 0.20, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Night: short headlight pools cast just ahead of the car
+            if (night) {
+                const beamLen = 60;
+                const topY = cy - h * 0.45 - beamLen;
+                ctx.save();
+                ctx.shadowColor = '#ffd';
+                ctx.shadowBlur = 14;
+                ctx.fillStyle = 'rgba(255,250,150,0.20)';
+                ctx.beginPath();
+                ctx.moveTo(left + w * 0.14, cy - h * 0.45);
+                ctx.lineTo(left + w * 0.02, topY);
+                ctx.lineTo(left + w * 0.30, topY);
+                ctx.lineTo(left + w * 0.30, cy - h * 0.45);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(left + w * 0.70, cy - h * 0.45);
+                ctx.lineTo(left + w * 0.70, topY);
+                ctx.lineTo(left + w * 0.98, topY);
+                ctx.lineTo(left + w * 0.86, cy - h * 0.45);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Rear tyres poking out the sides
+            ctx.fillStyle = '#0b0b0b';
+            rr(left - w * 0.03, cy + h * 0.16, w * 0.17, h * 0.42, 4); ctx.fill();
+            rr(right - w * 0.14, cy + h * 0.16, w * 0.17, h * 0.42, 4); ctx.fill();
+
+            // Diffuser / lower bumper
+            ctx.fillStyle = '#1a1a1a';
+            rr(left + w * 0.10, cy + h * 0.34, w * 0.80, h * 0.24, 5); ctx.fill();
+            // Exhaust tips
+            ctx.fillStyle = '#999';
+            ctx.beginPath(); ctx.arc(carX - w * 0.11, cy + h * 0.50, w * 0.03, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(carX + w * 0.11, cy + h * 0.50, w * 0.03, 0, Math.PI * 2); ctx.fill();
+
+            // Main body — sleek tapered silhouette
+            const bodyGrad = ctx.createLinearGradient(left, cy - h * 0.5, right, cy + h * 0.5);
+            bodyGrad.addColorStop(0, '#ff3030');
+            bodyGrad.addColorStop(0.5, '#e60000');
+            bodyGrad.addColorStop(1, '#9e0000');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.moveTo(left + w * 0.06, cy + h * 0.42);
+            ctx.lineTo(left - w * 0.01, cy + h * 0.02);
+            ctx.lineTo(left + w * 0.20, cy - h * 0.30);
+            ctx.quadraticCurveTo(carX, cy - h * 0.48, right - w * 0.20, cy - h * 0.30);
+            ctx.lineTo(right + w * 0.01, cy + h * 0.02);
+            ctx.lineTo(right - w * 0.06, cy + h * 0.42);
+            ctx.closePath();
+            ctx.fill();
+
+            // Glossy top highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.beginPath();
+            ctx.moveTo(left + w * 0.24, cy - h * 0.28);
+            ctx.quadraticCurveTo(carX, cy - h * 0.46, right - w * 0.24, cy - h * 0.28);
+            ctx.lineTo(right - w * 0.28, cy - h * 0.20);
+            ctx.quadraticCurveTo(carX, cy - h * 0.36, left + w * 0.28, cy - h * 0.20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Rear window
+            ctx.fillStyle = night ? '#0e111a' : '#243447';
+            ctx.beginPath();
+            ctx.moveTo(left + w * 0.31, cy - h * 0.20);
+            ctx.quadraticCurveTo(carX, cy - h * 0.34, right - w * 0.31, cy - h * 0.20);
+            ctx.lineTo(right - w * 0.35, cy - h * 0.04);
+            ctx.lineTo(left + w * 0.35, cy - h * 0.04);
+            ctx.closePath();
+            ctx.fill();
+
+            // Center racing stripe
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            rr(carX - w * 0.04, cy - h * 0.30, w * 0.08, h * 0.62, 2); ctx.fill();
+
+            // Tail-light bar
+            const tlY = cy + h * 0.10;
+            const tlH = h * 0.15;
+            ctx.save();
+            if (night) { ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 18; }
+            ctx.fillStyle = '#400';
+            rr(left + w * 0.10, tlY, w * 0.80, tlH, 3); ctx.fill();
+            ctx.fillStyle = night ? '#ff2a2a' : '#dd1010';
+            rr(left + w * 0.13, tlY + tlH * 0.22, w * 0.74, tlH * 0.56, 2); ctx.fill();
+            ctx.fillStyle = night ? '#ff8a8a' : '#ff5555';
+            rr(left + w * 0.14, tlY + tlH * 0.18, w * 0.20, tlH * 0.64, 2); ctx.fill();
+            rr(right - w * 0.34, tlY + tlH * 0.18, w * 0.20, tlH * 0.64, 2); ctx.fill();
+            ctx.restore();
+
+            // Rear wing (spoiler) on two supports
+            ctx.fillStyle = '#8a0000';
+            rr(carX - w * 0.30, cy - h * 0.30, w * 0.05, h * 0.22, 1); ctx.fill();
+            rr(carX + w * 0.25, cy - h * 0.30, w * 0.05, h * 0.22, 1); ctx.fill();
+            const wingGrad = ctx.createLinearGradient(0, cy - h * 0.44, 0, cy - h * 0.30);
+            wingGrad.addColorStop(0, '#2c2c2c');
+            wingGrad.addColorStop(1, '#101010');
+            ctx.fillStyle = wingGrad;
+            rr(carX - w * 0.46, cy - h * 0.44, w * 0.92, h * 0.13, 3); ctx.fill();
+        }
+
+        // ===== Particles =====
+        function addParticle(x, y, color) {
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: Math.random() * 2 + 1,
+                life: 30,
+                color
+            });
+        }
+
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                return p.life > 0;
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // ===== Update =====
+        function update(dt) {
+            if (!gameState.running || gameState.paused) return;
+
+            // Day / night cycle (shorter)
+            gameState.dayTime += dt / DAY_CYCLE;
+            if (gameState.dayTime >= 1) gameState.dayTime -= 1;
+            updateTimeIndicator();
+
+            const playerSeg = findSegment(position + PLAYER_Z);
+            const speedPercent = gameState.speed / MAX_SPEED;
+            const dxStep = dt * STEER * (0.3 + 0.7 * speedPercent);
+
+            // Steering
+            if (keys.ArrowLeft) {
+                player.x -= dxStep;
+                addParticle(WIDTH / 2 + 30, HEIGHT - 100, '#999');
+            } else if (keys.ArrowRight) {
+                player.x += dxStep;
+                addParticle(WIDTH / 2 - 30, HEIGHT - 100, '#999');
+            }
+            // Centrifugal force on curves
+            player.x -= dxStep * speedPercent * playerSeg.curve * CENTRIFUGAL;
+
+            // Acceleration / braking (slow accel)
+            if (keys.ArrowUp) gameState.speed += ACCEL * dt;
+            else if (keys.ArrowDown) gameState.speed += BRAKE * dt;
+            else gameState.speed += DECEL * dt;
+
+            // Off-road penalty
+            if ((player.x < -1 || player.x > 1) && gameState.speed > OFFROAD_LIMIT) {
+                gameState.speed += OFFROAD_DECEL * dt;
+                addParticle(WIDTH / 2 + (player.x < 0 ? -60 : 60), HEIGHT - 120, '#b9905a');
+            }
+
+            gameState.speed = clamp(gameState.speed, 0, MAX_SPEED);
+            player.x = clamp(player.x, -1.4, 1.4);
+
+            // Advance along the track
+            position = increase(position, dt * gameState.speed, trackLength);
+
+            // Distance accumulates and never resets while playing
+            gameState.totalDistance += dt * gameState.speed;
+            gameState.distanceKm = gameState.totalDistance / 20000;
+
+            // Mountains parallax follows curve + speed
+            mountainShift += playerSeg.curve * speedPercent * dt * 500;
+            mountainShift = mountainShift % 1000000;
+
+            // Cars: move, count overtakes, collisions
+            updateCars(dt, speedPercent);
+
+            // Passive score from speed (~60 pts/s at top speed)
+            gameState.score += speedPercent * 60 * dt;
+
+            updateParticles();
+            updateHUD();
+        }
+
+        function updateCars(dt, speedPercent) {
+            for (const car of cars) {
+                car.z = increase(car.z, dt * car.speed, trackLength);
+                const d = forwardDist(car.z);
+
+                // Overtake = the forward distance wrapped from ~0 up to ~trackLength
+                if (d - car.dist > trackLength * 0.5) {
+                    gameState.overtakes++;
+                    gameState.score += 150 + Math.floor(speedPercent * 200);
+                }
+                car.dist = d;
+
+                // Collision (car just ahead, same lane region)
+                const close = d > 0 && d < SEGMENT_LENGTH * 2.2;
+                const sameLane = Math.abs(player.x - car.offset) < (1.6 / LANES);
+                if (close && sameLane) {
+                    if (!car.hit) {
+                        gameState.speed *= 0.45;
+                        player.x += (player.x < car.offset ? -0.15 : 0.15);
+                        for (let i = 0; i < 6; i++) addParticle(WIDTH / 2, HEIGHT - 150, '#f55');
+                        car.hit = true;
+                    }
+                } else {
+                    car.hit = false;
+                }
+            }
+        }
+
+        // ===== HUD =====
+        function updateTimeIndicator() {
+            const timeInd = document.getElementById('timeIndicator');
+            if (isNight()) {
+                timeInd.className = 'night';
+                document.getElementById('timeIcon').textContent = '🌙';
+                document.getElementById('timeText').textContent = 'NIGHT';
+            } else {
+                timeInd.className = 'day';
+                document.getElementById('timeIcon').textContent = '☀';
+                document.getElementById('timeText').textContent = 'DAY';
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreValue').textContent = Math.floor(gameState.score).toLocaleString();
+            document.getElementById('distValue').innerHTML = gameState.distanceKm.toFixed(1) + '<small>km</small>';
+            document.getElementById('speedValue').textContent = Math.floor((gameState.speed / MAX_SPEED) * MAX_MPH);
+        }
+
+        // ===== Loop =====
+        let lastTime = 0;
+        function gameLoop(t) {
+            if (!gameState.running) return;
+            if (!lastTime) lastTime = t;
+            let dt = (t - lastTime) / 1000;
+            lastTime = t;
+            if (dt > 0.05) dt = 0.05; // clamp big frame gaps
+            update(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function initGame() {
+            releaseAllKeys();
+            buildRoad();
+            initCars();
+            player.x = 0;
+            position = 0;
+            mountainShift = 0;
+            particles = [];
+            gameState.score = 0;
+            gameState.totalDistance = 0;
+            gameState.distanceKm = 0;
+            gameState.speed = 0;
+            gameState.overtakes = 0;
+            gameState.dayTime = 0;
+            gameState.paused = false;
+            gameState.running = true;
+            lastTime = 0;
+            updateTimeIndicator();
+            updateHUD();
+        }
+
+        function startGame() {
+            showScreen('game');
+            initGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===== Screens / menus =====
+        function showScreen(name) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById('gameCanvas').classList.add('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('pauseTag').classList.add('hidden');
+
+            if (name === 'game') {
+                document.getElementById('gameCanvas').classList.remove('hidden');
+                document.getElementById('hud').classList.remove('hidden');
+                gameState.screen = 'game';
+            } else {
+                document.getElementById(name + 'Screen').classList.remove('hidden');
+                gameState.screen = name;
+                if (name !== 'game') gameState.running = false;
+            }
+        }
+
+        function updateMenu() {
+            document.querySelectorAll('.menu-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === gameState.selectedMenu);
+            });
+        }
+
+        function activateMenu() {
+            if (gameState.selectedMenu === 0) startGame();
+            else showScreen('instructions');
+        }
+
+        // ===== Boot sequence =====
+        const bootLines = [
+            'HORIZON RACER OS v3.0',
+            '========================',
+            '',
+            'Inicializando motor 3D... OK',
+            'Carregando texturas... OK',
+            'Sintonizando rádio... 104.5 FM',
+            'Verificando clima... DESERTO',
+            'Pista: 6 faixas até o horizonte',
+            '',
+            'Insert COIN to start...'
+        ];
+
+        async function runBootSequence() {
+            const bootText = document.getElementById('bootText');
+            bootText.innerHTML = '';
+            for (let i = 0; i < bootLines.length; i++) {
+                const line = document.createElement('div');
+                line.className = 'boot-line';
+                line.style.animationDelay = `${i * 0.1}s`;
+                line.textContent = bootLines[i] || ' ';
+                bootText.appendChild(line);
+                await new Promise(r => setTimeout(r, 100));
+            }
+            const promptLine = document.createElement('div');
+            promptLine.className = 'boot-line';
+            promptLine.style.animationDelay = `${bootLines.length * 0.1}s`;
+            promptLine.style.marginTop = '20px';
+            promptLine.style.color = '#ff6b35';
+            promptLine.textContent = '► Pressione qualquer tecla para continuar';
+            bootText.appendChild(promptLine);
+
+            document.addEventListener('keydown', function bootKey() {
+                document.removeEventListener('keydown', bootKey);
+                showScreen('title');
+                updateMenu();
+            }, { once: true });
+        }
+
+        // ===== Input =====
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            keys[e.key] = true;
+
+            if (gameState.screen === 'boot') return;
+
+            if (gameState.screen === 'title') {
+                const count = document.querySelectorAll('.menu-item').length;
+                if (e.key === 'ArrowUp') {
+                    gameState.selectedMenu = (gameState.selectedMenu - 1 + count) % count;
+                    updateMenu();
+                } else if (e.key === 'ArrowDown') {
+                    gameState.selectedMenu = (gameState.selectedMenu + 1) % count;
+                    updateMenu();
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    activateMenu();
+                }
+                return;
+            }
+
+            if (gameState.screen === 'instructions' && e.key === 'Escape') {
+                showScreen('title');
+                updateMenu();
+                return;
+            }
+
+            if (gameState.screen === 'game' && e.key === 'Escape') {
+                gameState.paused = !gameState.paused;
+                document.getElementById('pauseTag').classList.toggle('hidden', !gameState.paused);
+            }
+
+            if (gameState.screen === 'gameOver' && e.key === ' ') {
+                showScreen('title');
+                updateMenu();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Release every key if the window/tab loses focus, otherwise a key held
+        // during a focus change never receives its keyup and gets "stuck".
+        function releaseAllKeys() {
+            for (const k in keys) keys[k] = false;
+        }
+        window.addEventListener('blur', releaseAllKeys);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) releaseAllKeys();
+        });
+
+        // Menu click + hover
+        document.querySelectorAll('.menu-item').forEach((item, i) => {
+            item.addEventListener('mouseenter', () => {
+                gameState.selectedMenu = i;
+                updateMenu();
+            });
+            item.addEventListener('click', () => {
+                gameState.selectedMenu = i;
+                updateMenu();
+                activateMenu();
+            });
+        });
+
+        // ===== Init =====
+        updateMenu();
+        runBootSequence();
+    </script>
+</body>
+
+</html>

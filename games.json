@@ -69,5 +69,49 @@
       "shooter",
       "retro"
     ]
+  },
+  {
+    "id": "snake",
+    "name": "Snake",
+    "subtitle": "MSDOS EDITION",
+    "description": "O clássico jogo da cobra no estilo terminal DOS. Coma, cresça e sobreviva o máximo possível.",
+    "path": "/games/snake/",
+    "color": "#0f0",
+    "added": "2026-06-19",
+    "tags": [
+      "arcade",
+      "classic",
+      "retro",
+      "skill"
+    ]
+  },
+  {
+    "id": "tetris",
+    "name": "Tetris",
+    "subtitle": "WASTELAND EDITION",
+    "description": "O clássico puzzle de empilhar blocos em um mundo pós-apocalíptico colorido. Modo clássico puro.",
+    "path": "/games/tetris/",
+    "color": "#ff6b35",
+    "added": "2026-06-19",
+    "tags": [
+      "puzzle",
+      "classic",
+      "arcade"
+    ]
+  },
+  {
+    "id": "horizon-racer",
+    "name": "Horizon Racer",
+    "subtitle": "ENDURO x OUTRUN",
+    "description": "Cruze o deserto infinito em alta velocidade. Misto de Enduro e OutRun com ciclo dia/noite dinâmico.",
+    "path": "/games/horizon-racer/",
+    "color": "#ff6b35",
+    "added": "2026-06-19",
+    "tags": [
+      "racing",
+      "arcade",
+      "endless",
+      "retro"
+    ]
   }
 ]
