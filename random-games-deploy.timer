@@ -1,0 +1,17 @@
+[Unit]
+Description=Run Random Games deploy weekly (Thursday)
+Requires=random-games-deploy.service
+
+[Timer]
+# Quinta-feira 05:00 (horário de São Paulo) — algumas horas DEPOIS do agente
+# de criação de jogo rodar (~01:00 SP), garantindo que o novo jogo já foi
+# commitado e enviado para o GitHub antes do pull/rebuild.
+#
+# OBS: o sufixo de timezone em OnCalendar exige systemd >= 240 (padrão em
+# distros modernas). Se o systemd for mais antigo, remova o sufixo e use a
+# hora equivalente no fuso do servidor (ex.: UTC => 08:00:00).
+OnCalendar=Thu *-*-* 05:00:00 America/Sao_Paulo
+Persistent=true
+
+[Install]
+WantedBy=timers.target

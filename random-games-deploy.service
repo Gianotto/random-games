@@ -1,0 +1,15 @@
+[Unit]
+Description=Random Games Weekly Deploy
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/random-games
+ExecStart=/opt/random-games/deploy.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
