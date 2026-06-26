@@ -113,21 +113,5 @@
       "endless",
       "retro"
     ]
-  },
-  {
-    "id": "neo-jump-plus",
-    "name": "Cyber Quest",
-    "subtitle": "COSMIC EDITION",
-    "description": "Defenda sua base de ondas de inimigos",
-    "path": "/games/neo-jump-plus/",
-    "color": "#aaddff",
-    "added": "2026-06-26",
-    "tags": [
-      "defense",
-      "arcade",
-      "random",
-      "retro",
-      "casual"
-    ]
   }
 ]
