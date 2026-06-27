@@ -491,6 +491,7 @@
             <div class="menu">
                 <div class="menu-item selected" data-action="start">Cruzar o Deserto</div>
                 <div class="menu-item" data-action="instructions">Como Jogar</div>
+                <div class="menu-item" data-action="hub">← Voltar ao Hub</div>
             </div>
             <div class="menu-hint">↑ ↓ navegar &nbsp;•&nbsp; ENTER selecionar</div>
         </div>
@@ -1324,7 +1325,8 @@
 
         function activateMenu() {
             if (gameState.selectedMenu === 0) startGame();
-            else showScreen('instructions');
+            else if (gameState.selectedMenu === 1) showScreen('instructions');
+            else window.location.href = '/';
         }
 
         // ===== Boot sequence =====

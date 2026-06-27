@@ -423,6 +423,7 @@
             <div class="menu">
                 <div class="menu-item selected" data-action="start">Iniciar Jogo</div>
                 <div class="menu-item" data-action="instructions">Instruções</div>
+                <div class="menu-item" data-action="hub">← Voltar ao Hub</div>
             </div>
         </div>
 
@@ -625,12 +626,14 @@
         }
 
         function handleMenuAction() {
-            const action = gameState.selectedMenuItem === 0 ? 'start' : 'instructions';
-            if (action === 'start') {
+            const idx = gameState.selectedMenuItem;
+            if (idx === 0) {
                 showScreen('game');
                 startGame();
-            } else if (action === 'instructions') {
+            } else if (idx === 1) {
                 showScreen('instructions');
+            } else if (idx === 2) {
+                window.location.href = '/';
             }
         }
 
@@ -956,11 +959,12 @@
 
             // Menu
             if (gameState.screen === 'title') {
+                const count = document.querySelectorAll('.menu-item').length;
                 if (e.key === 'ArrowUp') {
-                    gameState.selectedMenuItem = 0;
+                    gameState.selectedMenuItem = (gameState.selectedMenuItem - 1 + count) % count;
                     updateMenuSelection();
                 } else if (e.key === 'ArrowDown') {
-                    gameState.selectedMenuItem = 1;
+                    gameState.selectedMenuItem = (gameState.selectedMenuItem + 1) % count;
                     updateMenuSelection();
                 } else if (e.key === 'Enter') {
                     handleMenuAction();
