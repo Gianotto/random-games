@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=root
-WorkingDirectory=/opt/random-games
-ExecStart=/opt/random-games/deploy.sh
+User=gianotto
+WorkingDirectory=/home/gianotto/randon-games
+ExecStart=/home/gianotto/randon-games/deploy.sh
 StandardOutput=journal
 StandardError=journal
 

@@ -39,24 +39,27 @@ Gerenciar a routine: https://claude.ai/code/routines
 O servidor executa o deploy 1x/semana, **depois** do agente, via `systemd`.
 
 Arquivos:
-- `deploy.sh` — faz `git pull` + `docker compose up -d --build` em `/opt/random-games`.
-- `random-games-deploy.service` — unidade oneshot que chama o `deploy.sh`.
+- `deploy.sh` — faz `git pull` + `docker compose up -d --build` em `/home/gianotto/randon-games`.
+- `random-games-deploy.service` — unidade oneshot que chama o `deploy.sh` (roda como usuário `gianotto`).
 - `random-games-deploy.timer` — dispara o service toda quinta 05:00 (SP).
+
+> **Pré-requisito:** o usuário `gianotto` precisa estar no grupo `docker`
+> (`sudo usermod -aG docker gianotto` e relogar), senão o `docker compose`
+> falha por permissão. Confira com `groups gianotto`.
 
 ### Instalação (uma vez) no essentia
 
 ```bash
-# 1. Garantir que o repo está em /opt/random-games (clone inicial, se ainda não)
-#    git clone https://github.com/Gianotto/random-games /opt/random-games
+# 1. Garantir que o repo está em /home/gianotto/randon-games (clone inicial, se ainda não)
+#    git clone https://github.com/Gianotto/random-games /home/gianotto/randon-games
 
 # 2. Trazer os arquivos atualizados
-cd /opt/random-games && git pull
+cd /home/gianotto/randon-games && git pull
 
-# 3. Instalar as units do systemd
-sudo cp /opt/random-games/random-games-deploy.service /etc/systemd/system/
-sudo cp /opt/random-games/random-games-deploy.timer   /etc/systemd/system/
-sudo chmod +x /opt/random-games/deploy.sh
-sudo touch /var/log/random-games-deploy.log
+# 3. Instalar as units do systemd (precisa de sudo só para /etc/systemd/system)
+sudo cp /home/gianotto/randon-games/random-games-deploy.service /etc/systemd/system/
+sudo cp /home/gianotto/randon-games/random-games-deploy.timer   /etc/systemd/system/
+chmod +x /home/gianotto/randon-games/deploy.sh
 
 # 4. Habilitar e iniciar o timer
 sudo systemctl daemon-reload
@@ -77,7 +80,7 @@ sudo systemctl start random-games-deploy.service
 
 # Logs
 journalctl -u random-games-deploy.service -f
-tail -f /var/log/random-games-deploy.log
+tail -f /home/gianotto/randon-games-deploy.log
 
 # Desabilitar
 sudo systemctl disable --now random-games-deploy.timer

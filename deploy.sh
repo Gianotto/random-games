@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-REPO_DIR="/opt/random-games"
-LOG_FILE="/var/log/random-games-deploy.log"
+REPO_DIR="/home/gianotto/randon-games"
+LOG_FILE="/home/gianotto/randon-games-deploy.log"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
