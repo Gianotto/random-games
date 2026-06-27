@@ -450,6 +450,9 @@
                 <div class="menu-item" data-action="topscores">
                     <span class="arrow">▶</span>TOP10 PONTUAÇÕES
                 </div>
+                <div class="menu-item" data-action="hub">
+                    <span class="arrow">▶</span>← VOLTAR AO HUB
+                </div>
             </div>
         </div>
 
@@ -545,7 +548,7 @@
             paused: false,
             playerName: '',
             selectedMenuItem: 0,
-            menuItems: ['start', 'instructions', 'topscores']
+            menuItems: ['start', 'instructions', 'topscores', 'hub']
         };
 
         // Canvas Setup
@@ -639,6 +642,8 @@
                 showScreen('instructions');
             } else if (action === 'topscores') {
                 showTopScores();
+            } else if (action === 'hub') {
+                window.location.href = '/';
             }
         }
 
