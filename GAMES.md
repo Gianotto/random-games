@@ -82,3 +82,4 @@ echo "[]" > /var/lib/random-games/scores/meu-jogo.json
 | ID               | Jogo            | Adicionado   |
 |------------------|-----------------|--------------|
 | torre-infinita   | Torre Infinita  | 2025-01-01   |
+| pitfall          | Pitfall         | 2026-08-06   |

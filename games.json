@@ -113,5 +113,20 @@
       "endless",
       "retro"
     ]
+  },
+  {
+    "id": "pitfall",
+    "name": "Pitfall",
+    "subtitle": "MSDOS EDITION",
+    "description": "Cruze a selva como um explorador. Pule poços, desvie de cobras, escorpiões e crocodilos. Colete tesouros e sobreviva!",
+    "path": "/games/pitfall/",
+    "color": "#0f0",
+    "added": "2026-08-06",
+    "tags": [
+      "platform",
+      "classic",
+      "arcade",
+      "retro"
+    ]
   }
 ]
